@@ -4,12 +4,10 @@ import numpy as np
 import os.path
 from pathlib import Path
 from torchvision.datasets import VisionDataset
+import cv2
 
 
 class ColonDataset(VisionDataset):
-
-
-
     def __init__(self, root, transform=None, target_transform=None, num_samples=None):
         super(ColonDataset, self).__init__(root, transform=transform, target_transform=target_transform)
         self.video_dirs = sorted(Path(self.root).iterdir())
@@ -40,7 +38,10 @@ class ColonDataset(VisionDataset):
     def _load_colon(self, sample_dir):
         # use pil to load image. path is te sampledir
         im_path = str(sample_dir / "colon.png")
-        colon = np.array(Image.open(im_path))
+        colon=cv2.imread(im_path)
+        resized_image = cv2.resize(colon, (224, 224),
+                                   interpolation=cv2.INTER_NEAREST)
+        colon = np.array(resized_image)
         colon=np.moveaxis(colon,-1,0)
         colon = torch.from_numpy(colon)
         colon= colon/255.0
@@ -49,7 +50,7 @@ class ColonDataset(VisionDataset):
 
     def _load_location(self, sample_dir):
         # check
-        location_path=str(sample_dir / "location.txt")
+        location_path=str(sample_dir / "Location.txt")
         loc = open(location_path, 'r')
         location = loc.read()
         location_dict= {"R":0,"L":2,"M":1}
@@ -73,8 +74,10 @@ class ColonDataset(VisionDataset):
 
 
 
-# if __name__ == '__main__':
-#     dataset = ColonDataset(root = "D:\\Beril\\Thesis\\Data\\Train_Label\\Labels")
+# if __name__ == "__main__":
+#     print("hello")
+#     dataset = ColonDataset('/home/beril/Thesis_Beril/Train_Labels')
 #     colon,location= dataset[0]
-#     print(len(dataset))
+#
+#     print("length dataset: ",len(dataset))
 

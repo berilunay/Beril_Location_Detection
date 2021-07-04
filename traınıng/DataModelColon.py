@@ -1,4 +1,5 @@
 import torch
+from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.metrics.functional import accuracy
 from torchvision.models import resnet18
 from pytorch_lightning import LightningModule
@@ -68,9 +69,11 @@ class ColonDataModel(LightningModule):
 def args_part():
     parser = ArgumentParser(add_help=False)
     parser.add_argument("--test", default=1, type=int)
-    parser.add_argument("--learning_rate", default=1e-4, type=float)
-    parser.add_argument("--batch_size", default=16, type=int)
-    parser.add_argument("--max_epochs", default=15, type=int)
+    parser.add_argument("--learning_rate", default=2e-4, type=float)
+    parser.add_argument("--batch_size", default=64, type=int)
+    parser.add_argument("--max_epochs", default=20, type=int)
+    parser.add_argument("--num_workers", default=4, type=int)
+    parser.add_argument("--gpus", default=1, type=int)
     args = parser.parse_args()
 
     return args
@@ -82,12 +85,10 @@ def train_part():
     model=ColonDataModel(hparams=args)
     datamodule_colon=ColonDataModule(hparams=args)
 
-    trainer=Trainer( max_epochs=args.max_epochs)
+    trainer=Trainer( max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
     trainer.fit(model,datamodule_colon)
 
-    #for testing
-    if args.test:
-       trainer.test(datamodule=datamodule_colon)
+    trainer.test(datamodule=datamodule_colon)
 
 
 if __name__ == '__main__':
