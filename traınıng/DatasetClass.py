@@ -50,10 +50,12 @@ class ColonDataset(VisionDataset):
 
     def _load_location(self, sample_dir):
         # check
-        location_path=str(sample_dir / "Location.txt")
+        #location_path=str(sample_dir / "Location.txt")
+        location_path = str(sample_dir / "Quality.txt")
         loc = open(location_path, 'r')
         location = loc.read()
-        location_dict= {"R":0,"L":2,"M":1}
+        #location_dict= {"R":0,"L":2,"M":1}
+        location_dict = {"G": 0, "p": 2, "M": 1, "B":3}
         location_label=location_dict[location]
         location_label=torch.tensor(location_label)
         return location_label

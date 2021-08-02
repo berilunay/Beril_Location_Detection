@@ -13,14 +13,20 @@ class ColonDataModule(pl.LightningDataModule):
         super(ColonDataModule, self).__init__()
         self.hparams = hparams
 
-        self.root_dir_train= "/home/beril/Thesis_Beril/Train_Labels"
+        self.root_dir_train= "/home/beril/Thesis_Beril/Train_Labels_Quality"
        # self.root_dir_test = "/home/beril/Thesis_Beril/Test_Labels"  #create new folder in the server
-        self.transform = transforms.Normalize(mean, std) if mean is not None else None
+        #self.transform = transforms.Normalize(mean, std) if mean is not None else None
+        self.my_transform=transforms.Compose([
+            transforms.RandomCrop((224,224)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(degrees=95),
+            transforms.ColorJitter(brightness=0.5)
+        ])
 
 
     def setup(self, stage=None):
 
-        train_dataset=ColonDataset(root=self.root_dir_train,transform=self.transform)
+        train_dataset=ColonDataset(root=self.root_dir_train,transform=self.my_transform)
 
         #do the split
         len_train_dataset = len(train_dataset)

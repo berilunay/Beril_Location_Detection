@@ -20,7 +20,7 @@ class ColonDataModel(LightningModule):
         self.save_hyperparameters(hparams)
 
         # Network
-        self.network = resnet18(num_classes=3)
+        self.network = resnet18(num_classes=4)
 
 
     def forward(self, x):
@@ -71,7 +71,7 @@ def args_part():
     parser.add_argument("--test", default=1, type=int)
     parser.add_argument("--learning_rate", default=2e-4, type=float)
     parser.add_argument("--batch_size", default=64, type=int)
-    parser.add_argument("--max_epochs", default=20, type=int)
+    parser.add_argument("--max_epochs", default=50, type=int)
     parser.add_argument("--num_workers", default=4, type=int)
     parser.add_argument("--gpus", default=1, type=int)
     args = parser.parse_args()
@@ -85,10 +85,15 @@ def train_part():
     model=ColonDataModel(hparams=args)
     datamodule_colon=ColonDataModule(hparams=args)
 
+    # trainer = Trainer(auto_lr_find=True, max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
+    # trainer.tune(model,datamodule_colon)
+
+
+    #--------------------------------------------------------------------------------------------
     trainer=Trainer( max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
     trainer.fit(model,datamodule_colon)
-
     trainer.test(datamodule=datamodule_colon)
+    # --------------------------------------------------------------------------------------------
 
 
 if __name__ == '__main__':
