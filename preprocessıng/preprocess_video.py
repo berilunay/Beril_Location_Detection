@@ -4,20 +4,21 @@ import os
 from PIL import Image
 import pytesseract
 import shutil
+import csv
 
 
 def conv_video2_image():
 
-    fileLoc = '/home/beril/Thesis_Beril/Videos/Video006.mp4'
+    fileLoc = '/home/beril/Thesis_Beril/Videos/Video004.mp4'
     cap = cv2.VideoCapture(fileLoc)
 
     # Create Frames Desired
-    FrameSkip = 30
+    FrameSkip = 25
     try:
         if not os.path.exists('/home/beril/Thesis_Beril/Images'):
             os.makedirs('/home/beril/Thesis_Beril/Images')
-        if not os.path.exists('/home/beril/Thesis_Beril/Images/Video5'):
-            os.makedirs('/home/beril/Thesis_Beril/Images/Video5')
+        if not os.path.exists('/home/beril/Thesis_Beril/Images/Video3'):
+            os.makedirs('/home/beril/Thesis_Beril/Images/Video3')
     except OSError:
         print("Error creating directory")
 
@@ -29,7 +30,7 @@ def conv_video2_image():
     while (current_frame < length):
         # Capture Frame - by - Frame
         ret, frame = cap.read()
-        name = '/home/beril/Thesis_Beril/Images/Video5/Image'+f'{current_frame:05d}'+'.jpg'
+        name = '/home/beril/Thesis_Beril/Images/Video3/Image'+f'{current_frame:05d}'+'.jpg'
 
         if (current_frame // FrameSkip == current_frame / FrameSkip):
             print('Creating...' + name)
@@ -98,11 +99,11 @@ def test_method():
 
 def trial_labels():
 
-    video_path="/home/beril/Thesis_Beril/Images/Video2"
+    video_path="/home/beril/Thesis_Beril/Images/Video3"
     current=1
     for filename in sorted(os.listdir(video_path)):
-        im_path = '/home/beril/Thesis_Beril/Images/Video2/' + str(filename)
-        copy_path='/home/beril/Thesis_Beril/Train_Labels/Video2/Image'+f'{current:05d}'
+        im_path = '/home/beril/Thesis_Beril/Images/Video3/' + str(filename)
+        copy_path='/home/beril/Thesis_Beril/Train_Labels/Video3/Image'+f'{current:05d}'
 
         try:
             if not os.path.exists(copy_path):
@@ -141,8 +142,9 @@ def trial_labels():
         create_txt_loc(new_path2, returned_text2)
         if( returned_text2!= "R" and  returned_text2!= "L" and returned_text2!= "M" ):
             print("There is a problem in image: ",current)
-            print("path removeed: ",copy_path)
+            print("path removed: ",copy_path)
             shutil.rmtree(copy_path)
+            current = current - 1
         current+=1
 
 def video_to_image_quality():
@@ -258,38 +260,69 @@ def detect_empty_image(path):
 
 
 def create_label_folders():
-    main_path="D:\\Beril\\Thesis\\Python_pre\\Trial"
-    copyR ="D:\\Beril\\Thesis\\Data\\Label_Model\\R"
-    copyL ="D:\\Beril\\Thesis\\Data\\Label_Model\\L"
-    copyM ="D:\\Beril\\Thesis\\Data\\Label_Model\\M"
-    count=1
+    main_path='/home/beril/Thesis_Beril/Train_Labels/Video5'
+    copyR ='/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/R'
+    copyL ='/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/L'
+    copyM ='/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/M'
+    count_R=1
+    count_L=1
+    count_M=1
+    print("Started......")
     for dir_name in os.listdir(main_path):
-            image_path="D:\\Beril\\Thesis\\Python_pre\\Trial\\"+ str(dir_name) + "\\"+ "colon.png"
-            label_path="D:\\Beril\\Thesis\\Python_pre\\Trial\\"+ str(dir_name) + "\\"+ "Location.txt"
-            loc=open(label_path,'r')
-            string_loc=loc.read()
+            image_path='/home/beril/Thesis_Beril/Train_Labels/Video5/'+ str(dir_name) + "/"+ "3D.png"
             img = Image.open(image_path)
+            label_path = '/home/beril/Thesis_Beril/Train_Labels/Video5/' + str(dir_name) + "/" + "Location.txt"
+            loc = open(label_path, 'r')
+            string_loc = loc.read()
+
 
             if (string_loc=="R"):
-                file_path = os.path.join(copyR, "colon" +str(count)+ ".png")
+                file_path = os.path.join(copyR, "3D_V5_" +f'{count_R:05d}'+ ".png")
                 img.save(file_path)
+                count_R = count_R + 1
 
             elif(string_loc=="M"):
-                file_path = os.path.join(copyM, "colon" + str(count) + ".png")
+                file_path = os.path.join(copyM, "3D_V5_" +f'{count_M:05d}'+ ".png")
                 img.save(file_path)
+                count_M = count_M + 1
 
             else:
-                file_path = os.path.join(copyL, "colon" + str(count) + ".png")
+                file_path = os.path.join(copyL, "3D_V5_" + f'{count_L:05d}' + ".png")
                 img.save(file_path)
+                count_L = count_L + 1
 
-            count=count+1
 
+    print("Images in R: ",count_R)
+    print("Images in L: ", count_L)
+    print("Images in M: ", count_M)
+
+
+def create_csv():
+    f = open('/home/beril/Thesis_Beril/Dataset_VideoCNN/Dataset_VideoCNN_Paths.csv', 'w')
+    # path1=[[/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/L]]
+    # path2=['/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/M']
+    # path3=['/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/R']
+    # create the csv writer
+    path_list=['/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/R','/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/M','/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video/L']
+    writer = csv.writer(f)
+
+
+    # write a row to the csv file
+    for path in path_list:
+        writer.writerow([str(path)])
+
+
+    # close the file
+    f.close()
 
 
 if __name__ == '__main__':
     #trial_labels()
     #video_to_image_quality()
-    create_train_label_quality()
+    #create_train_label_quality()
+    #create_label_folders()
+    create_csv()
+
 
 
 

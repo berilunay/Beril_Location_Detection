@@ -14,7 +14,6 @@ class ColonDataModule(pl.LightningDataModule):
         self.hparams = hparams
 
         self.root_dir_train= "/home/beril/Thesis_Beril/Train_Labels_Quality"
-       # self.root_dir_test = "/home/beril/Thesis_Beril/Test_Labels"  #create new folder in the server
         #self.transform = transforms.Normalize(mean, std) if mean is not None else None
         self.my_transform=transforms.Compose([
             transforms.RandomCrop((224,224)),
