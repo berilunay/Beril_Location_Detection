@@ -6,28 +6,25 @@ from torchvision import transforms
 from DatasetClass import ColonDataset
 
 
-
-
 class ColonDataModule(pl.LightningDataModule):
-    def __init__(self,hparams, mean=None, std=None):
+    def __init__(self, hparams, mean=None, std=None):
         super(ColonDataModule, self).__init__()
-        self.hparams = hparams
+        self.save_hyperparameters(hparams)
 
-        self.root_dir_train= "/home/beril/Thesis_Beril/Train_Labels_Quality"
-        #self.transform = transforms.Normalize(mean, std) if mean is not None else None
-        self.my_transform=transforms.Compose([
-            transforms.RandomCrop((224,224)),
+        self.root_dir_train = "/home/beril/Thesis_Beril/Train_Labels_Quality"
+        # self.transform = transforms.Normalize(mean, std) if mean is not None else None
+        self.my_transform = transforms.Compose([
+            transforms.RandomCrop((224, 224)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomRotation(degrees=95),
             transforms.ColorJitter(brightness=0.5)
         ])
 
-
     def setup(self, stage=None):
 
-        train_dataset=ColonDataset(root=self.root_dir_train,transform=self.my_transform)
+        train_dataset = ColonDataset(root=self.root_dir_train, transform=self.my_transform)
 
-        #do the split
+        # do the split
         len_train_dataset = len(train_dataset)
         len_train_splitted = int(0.6 * len_train_dataset)
         len_val = len_train_dataset - len_train_splitted
@@ -42,18 +39,17 @@ class ColonDataModule(pl.LightningDataModule):
         val_dataset, test_dataset = random_split(val_dataset, [len_val_splitted, len_test])
 
         if stage == "fit" or stage is None:
-                self.train_dataset = train_dataset
-                self.val_dataset = val_dataset
+            self.train_dataset = train_dataset
+            self.val_dataset = val_dataset
 
         if stage == "test" or stage is None:
-                self.test_dataset = test_dataset
-
+            self.test_dataset = test_dataset
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset,self.hparams.batch_size,  num_workers=self.hparams.num_workers)
+        return DataLoader(self.val_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, self.hparams.batch_size,  num_workers=self.hparams.num_workers)
+        return DataLoader(self.test_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
