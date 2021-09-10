@@ -1,12 +1,12 @@
 import os
 import pathlib
-
+import matplotlib.pyplot as plt
 import pytorch_lightning
 import pytorchvideo.data
 import torch.utils.data
 #from pytorchvideo.data import labeled_video_dataset, LabeledVideoDataset
 from numpy import shape
-
+import numpy as np
 from labeledvideodataset import LabeledVideoDataset
 from pytorchvideo.data.labeled_video_paths import LabeledVideoPaths
 from torch.utils.data import DataLoader
@@ -26,7 +26,7 @@ from torchvision.transforms import (
     Compose,
     Lambda,
     RandomCrop,
-    RandomHorizontalFlip, Resize, ColorJitter
+    RandomHorizontalFlip, Resize, ColorJitter, ToTensor
 )
 
 
@@ -41,20 +41,19 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
         self._DATA_PATH_TRAIN = "/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video"
         self._DATA_PATH_TEST = "/home/beril/Thesis_Beril/Dataset_VideoCNN/Test_Location_Video"
         self._DATA_PATH_VAL = "/home/beril/Thesis_Beril/Dataset_VideoCNN/Val_Location_Video"
-        self._CLIP_DURATION = 0.2  # Duration of sampled clip for each video 0.2 before
+        #self._CLIP_DURATION = self.hparams.clip_duration
+        self._CLIP_DURATION = 0.2 # Duration of sampled clip for each video 0.2 before
         self.train_transforms = Compose(
             [
                 ApplyTransformToKey(
                     key="video",
                     transform=Compose(
                         [
-                            Resize(512),
-                            #UniformTemporalSubsample(8),
-                            #Lambda(lambda x: x / 255.0),
-                            #Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
-                            #RandomShortSideScale(min_size=256, max_size=320),
-                            RandomCrop(512),
-                            RandomHorizontalFlip(p=0.5),
+                            Resize(224),
+                            Lambda(lambda x: x / 255.0),
+                            #RandomCrop(224),
+                            #RandomHorizontalFlip(p=0.5),
+
 
                         ]
                     ),
@@ -86,24 +85,25 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
 
         train_dataset = LabeledVideoDataset(
             labeled_video_paths=train_dataset_path,
-            clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
+            clip_sampler=pytorchvideo.data.make_clip_sampler("random", self._CLIP_DURATION),
             decode_audio=False,
             transform=self.train_transforms
         )
 
+        #shape tensor 3, 15, 224, 224
         batch = next(iter(train_dataset))
         print(shape(batch["video"]))
 
 
         val_dataset=LabeledVideoDataset(
             labeled_video_paths=val_dataset_path,
-            clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
+            clip_sampler=pytorchvideo.data.make_clip_sampler("random", self._CLIP_DURATION),
             decode_audio=False,
             transform = self.train_transforms
         )
         test_dataset=LabeledVideoDataset(
             labeled_video_paths=test_dataset_path,
-            clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
+            clip_sampler=pytorchvideo.data.make_clip_sampler("random", self._CLIP_DURATION),
             decode_audio=False,
             transform = self.train_transforms
         )
@@ -115,14 +115,17 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
         if stage == "test" or stage is None:
             self.test_dataset = test_dataset
 
-    def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size, num_workers=self.hparams.num_workers)
 
+    def train_dataloader(self):
+        #return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size,num_workers=self.hparams.num_workers)
+        return DataLoader(self.train_dataset, batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size, num_workers=self.hparams.num_workers)
+        #return DataLoader(self.val_dataset,batch_size=self.hparams.batch_size,num_workers=self.hparams.num_workers)
+        return DataLoader(self.val_dataset, batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.hparams.batch_size, num_workers=self.hparams.num_workers)
+        #return DataLoader(self.test_dataset, batch_size=self.hparams.batch_size, num_workers=self.hparams.num_workers)
+        return DataLoader(self.test_dataset, batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
 
     @hparams.setter
     def hparams(self, value):

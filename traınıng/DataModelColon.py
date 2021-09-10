@@ -63,7 +63,8 @@ class ColonDataModel(LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer = Adam(self.parameters(), lr=self.hparams.learning_rate)
+        #optimizer = Adam(self.parameters(), lr=self.hparams.learning_rate)
+        optimizer = Adam(self.parameters(), lr=self.hparams["learning_rate"],weight_decay=self.hparams["weight_decay"])
         return optimizer
 
 def args_part():
@@ -80,20 +81,34 @@ def args_part():
 
 def train_part():
     seed_everything(123)
-    args=args_part()
-
-    model=ColonDataModel(hparams=args)
-    datamodule_colon=ColonDataModule(hparams=args)
-
-    # trainer = Trainer(auto_lr_find=True, max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
-    # trainer.tune(model,datamodule_colon)
-
+    #args=args_part()
+    #----------------------------------------------------------
+    # model=ColonDataModel(hparams=args)
+    # datamodule_colon=ColonDataModule(hparams=args)
+    #
+    # # trainer = Trainer(auto_lr_find=True, max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
+    # # trainer.tune(model,datamodule_colon)
+    #
+    #
+    # #--------------------------------------------------------------------------------------------
+    # trainer=Trainer( max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
+    # trainer.fit(model,datamodule_colon)
+    # trainer.test(datamodule=datamodule_colon)
+    # --------------------------------------------------------------------------------------------
+    hparams = {'weight_decay': 1.4896315717203087e-05,
+               'batch_size': 103,
+               'learning_rate': 0.0002780727683840415,
+               'num_workers': 4,
+               'gpus': 1,
+               'test': 1
+               }
+    model=ColonDataModel(hparams)
+    datamodule_colon=ColonDataModule(hparams)
 
     #--------------------------------------------------------------------------------------------
-    trainer=Trainer( max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
+    trainer=Trainer( max_epochs=80, gpus=hparams["gpus"], logger=WandbLogger())
     trainer.fit(model,datamodule_colon)
     trainer.test(datamodule=datamodule_colon)
-    # --------------------------------------------------------------------------------------------
 
 
 if __name__ == '__main__':
