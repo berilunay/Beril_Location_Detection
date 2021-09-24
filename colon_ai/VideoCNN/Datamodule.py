@@ -7,7 +7,6 @@ import torch.utils.data
 #from pytorchvideo.data import labeled_video_dataset, LabeledVideoDataset
 from numpy import shape
 import numpy as np
-from labeledvideodataset import LabeledVideoDataset
 from pytorchvideo.data.labeled_video_paths import LabeledVideoPaths
 from torch.utils.data import DataLoader
 
@@ -29,6 +28,8 @@ from torchvision.transforms import (
     RandomHorizontalFlip, Resize, ColorJitter, ToTensor
 )
 
+from colon_ai.VideoCNN.labeledvideodataset import LabeledVideoDataset
+
 
 class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
     @property
@@ -42,7 +43,7 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
         self._DATA_PATH_TEST = "/home/beril/Thesis_Beril/Dataset_VideoCNN/Test_Location_Video"
         self._DATA_PATH_VAL = "/home/beril/Thesis_Beril/Dataset_VideoCNN/Val_Location_Video"
         #self._CLIP_DURATION = self.hparams.clip_duration
-        self._CLIP_DURATION = 0.2 # Duration of sampled clip for each video 0.2 before
+        self._CLIP_DURATION = 0.3 # Duration of sampled clip for each video 0.2 before
         self.train_transforms = Compose(
             [
                 ApplyTransformToKey(
@@ -51,8 +52,8 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
                         [
                             Resize(224),
                             Lambda(lambda x: x / 255.0),
-                            #RandomCrop(224),
-                            #RandomHorizontalFlip(p=0.5),
+                            RandomCrop(224),
+                            RandomHorizontalFlip(p=0.5),
 
 
                         ]

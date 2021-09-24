@@ -296,6 +296,48 @@ def create_label_folders():
     print("Images in L: ", count_L)
     print("Images in M: ", count_M)
 
+def create_label_folder_quality():
+    main_path = '/home/beril/Thesis_Beril/Train_Labels_Quality/Video1'
+    copyG = '/home/beril/Thesis_Beril/Dataset_Quality_VideoCNN/Val_Quality_Video/G/Video1'
+    copyB = '/home/beril/Thesis_Beril/Dataset_Quality_VideoCNN/Val_Quality_Video/B/Video1'
+    copyM = '/home/beril/Thesis_Beril/Dataset_Quality_VideoCNN/Val_Quality_Video/M/Video1'
+    copyP = '/home/beril/Thesis_Beril/Dataset_Quality_VideoCNN/Val_Quality_Video/p/Video1'
+    count_G = 1
+    count_B = 1
+    count_M = 1
+    count_P=1
+    print("Started......")
+    for dir_name in os.listdir(main_path):
+        image_path = '/home/beril/Thesis_Beril/Train_Labels_Quality/Video1/' + str(dir_name) + "/" + "colon.png"
+        img = Image.open(image_path)
+        label_path = '/home/beril/Thesis_Beril/Train_Labels_Quality/Video1/' + str(dir_name) + "/" + "Quality.txt"
+        loc = open(label_path, 'r')
+        string_loc = loc.read()
+
+        if (string_loc == "G"):
+            file_path = os.path.join(copyG, "3D_V1_" + f'{count_G:05d}' + ".png")
+            img.save(file_path)
+            count_G = count_G + 1
+
+        elif (string_loc == "B"):
+            file_path = os.path.join(copyB, "3D_V1_" + f'{count_B:05d}' + ".png")
+            img.save(file_path)
+            count_B = count_B + 1
+
+        elif (string_loc == "M"):
+            file_path = os.path.join(copyM, "3D_V1_" + f'{count_M:05d}' + ".png")
+            img.save(file_path)
+            count_M = count_M + 1
+
+        else:
+            file_path = os.path.join(copyP, "3D_V1_" + f'{count_P:05d}' + ".png")
+            img.save(file_path)
+            count_P= count_P + 1
+
+    print("Images in G: ", count_G)
+    print("Images in B: ", count_B)
+    print("Images in M: ", count_M)
+    print("Images in P: ", count_P)
 
 def create_csv():
     f = open('/home/beril/Thesis_Beril/Dataset_VideoCNN/Dataset_VideoCNN_Paths.csv', 'w')
@@ -321,7 +363,8 @@ if __name__ == '__main__':
     #video_to_image_quality()
     #create_train_label_quality()
     #conv_video2_image()
-    create_label_folders()
+    #create_label_folders()
+    create_label_folder_quality()
 
 
 

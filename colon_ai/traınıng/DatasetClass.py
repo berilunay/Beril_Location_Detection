@@ -3,6 +3,8 @@ from PIL import Image
 import numpy as np
 import os.path
 from pathlib import Path
+
+from matplotlib import pyplot as plt
 from torchvision.datasets import VisionDataset
 import cv2
 
@@ -38,13 +40,15 @@ class ColonDataset(VisionDataset):
     def _load_colon(self, sample_dir):
         # use pil to load image. path is te sampledir
         im_path = str(sample_dir / "colon.png")
+        #im_path = str(sample_dir / "3D.png")
         colon=cv2.imread(im_path)
-        resized_image = cv2.resize(colon, (224, 224),
-                                   interpolation=cv2.INTER_NEAREST)
-        colon = np.array(resized_image)
+        resized_image = cv2.resize(colon, (224, 224),interpolation=cv2.INTER_NEAREST)
+        img_new=cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB)
+        colon = np.array(img_new)
         colon=np.moveaxis(colon,-1,0)
         colon = torch.from_numpy(colon)
         colon= colon/255.0
+
         return colon
 
 
@@ -76,10 +80,10 @@ class ColonDataset(VisionDataset):
 
 
 
-# if __name__ == "__main__":
-#     print("hello")
-#     dataset = ColonDataset('/home/beril/Thesis_Beril/Train_Labels')
-#     colon,location= dataset[0]
-#
-#     print("length dataset: ",len(dataset))
+if __name__ == "__main__":
+    print("hello")
+    dataset = ColonDataset('/home/beril/Thesis_Beril/Train_Labels')
+    colon,location= dataset[0]
+
+
 

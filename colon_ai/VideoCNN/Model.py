@@ -10,10 +10,12 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
 from torchmetrics import Accuracy
 import numpy as np
-from Datamodule import VideoCNNDataModule
-import wandb
+
 import torchvision
 from pytorch_lightning.callbacks import Callback
+import wandb
+
+from colon_ai.VideoCNN.Datamodule import VideoCNNDataModule
 
 
 class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
@@ -118,18 +120,18 @@ def train_part():
     seed_everything(123)
     #args = args_part()
 
-    hparams = {'weight_decay': 0.0003366416828404148,
-               'batch_size': 3,
-               'learning_rate': 1.27963074094392e-05,
+    hparams = {'weight_decay': 1e-4,
+               'batch_size': 4,
+               'learning_rate': 1e-4,
                'num_workers': 1,
                'gpus': 1,
                'test':1
                }
     classification_module = VideoClassificationLightningModule(hparams)
     data_module = VideoCNNDataModule(hparams)
-    trainer = pytorch_lightning.Trainer(max_epochs=50, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=Datasetview())
+    trainer = pytorch_lightning.Trainer(max_epochs=80, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=Datasetview())
     trainer.fit(classification_module, data_module)
-    #trainer.test(datamodule=data_module)
+    trainer.test(datamodule=data_module)
 
     # ---------------------------------------------------------------------------------------------------
     # classification_module = VideoClassificationLightningModule(hparams=args)

@@ -3,19 +3,20 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 from torchvision import transforms
-from DatasetClass import ColonDataset
 
 
-class ColonDataModule(pl.LightningDataModule):
+
+class ColonDataModuleLocation(pl.LightningDataModule):
     @property
     def hparams(self):
         return self._hparams
 
     def __init__(self, hparams, mean=None, std=None):
-        super(ColonDataModule, self).__init__()
+        super(ColonDataModuleLocation, self).__init__()
         #self.save_hyperparameters(hparams)
         self.hparams = hparams
-        self.root_dir_train = "/home/beril/Thesis_Beril/Train_Labels_Quality"
+        self.root_dir_train = "/home/beril/Thesis_Beril/Train_Labels"
+
 
         self.my_transform = transforms.Compose([
             transforms.RandomCrop((224, 224)),
@@ -50,15 +51,13 @@ class ColonDataModule(pl.LightningDataModule):
             self.test_dataset = test_dataset
 
     def train_dataloader(self):
-        #return DataLoader(self.train_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.train_dataset, self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
 
     def val_dataloader(self):
-        #return DataLoader(self.val_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.val_dataset,  self.hparams["batch_size"],num_workers=self.hparams["num_workers"])
+
     def test_dataloader(self):
-        #return DataLoader(self.test_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.test_dataset,  self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
     @hparams.setter

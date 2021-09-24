@@ -1,14 +1,10 @@
 import optuna
 import pytorch_lightning
-import torch
 from optuna.integration import PyTorchLightningPruningCallback
 from optuna.visualization.matplotlib import plot_optimization_history
 
-from pytorch_lightning import Callback
-from pytorch_lightning.utilities import argparse
-
-from traınıng.DataLoaderColon import ColonDataModule
-from traınıng.DataModelColon import ColonDataModel
+from colon_ai.VideoCNN_Quality.Datamodule_Quality import VideoCNNDataModuleQuality
+from colon_ai.VideoCNN_Quality.model_quality import VideoClassificationLightningModuleQuality
 
 
 def objective(trial):
@@ -16,37 +12,33 @@ def objective(trial):
     # create a trainer
     trainer = pytorch_lightning.Trainer(
         logger=False,
-        max_epochs=50,
+        max_epochs=80,
         gpus=1,
         #early_stop_callback=PyTorchLightningPruningCallback(trial, monitor="val_acc"),  # early stopping
         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_acc")]
     )
-    SAVE_PATH="saved_model.pth"
+
     # here we sample the hyper params, similar as in our old random search
-    trial_hparams = {"weight_decay": trial.suggest_loguniform("weight_decay", 1e-5, 3e-5),
-                    "batch_size": trial.suggest_int("batch_size", 100, 128),
-                    "learning_rate": trial.suggest_loguniform("learning_rate", 1e-4, 1e-3),
-                    "num_workers":4,
+    trial_hparams = {"weight_decay": trial.suggest_loguniform("weight_decay", 1e-5, 5e-4),
+                    "batch_size": trial.suggest_int("batch_size", 2, 8),
+                    "learning_rate": trial.suggest_loguniform("learning_rate", 1e-6, 5e-4),
+                    "num_workers":1,
                     'gpus': 1
                      }
 
-    #-------------------------------------------------------------------------------------
-    # create model from these hyper params and train it
-    model = ColonDataModel(trial_hparams)
-    datamodule_colon = ColonDataModule(trial_hparams)
-    trainer.fit(model,datamodule_colon)
+    model = VideoClassificationLightningModuleQuality(trial_hparams)
+    data_module = VideoCNNDataModuleQuality(trial_hparams)
+    trainer.fit(model,data_module)
 
-    # save model
-    #torch.save(model.state_dict(), SAVE_PATH)
-    # return validation accuracy from latest model, as that's what we want to minimize by our hyper param search
     return trainer.callback_metrics["val_acc"].item()
 
 if __name__ == '__main__':
     print("...........Testing Hyperparamater Starts............", "\n")
     pruner = optuna.pruners.NopPruner()
     study = optuna.create_study(direction="maximize", pruner=pruner)
-    study.optimize(objective, n_trials=20)
-
+    study.optimize(objective, n_trials=30)
+    plot_optimization_history(study)
+    #
     print("Number of finished trials: {}".format(len(study.trials)))
 
     print("Best trial:")
