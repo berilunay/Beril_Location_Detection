@@ -73,7 +73,7 @@ def show_ouput(model, dataloader, class_dict=None):
             features = features
             logits = model(features)
             predictions = torch.argmax(logits, dim=1)
-            all_prediction.append(predictions)
+           # all_prediction.append(predictions)
         break
 
     fig, axes = plt.subplots(nrows=7, ncols=10,

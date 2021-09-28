@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 from torchvision import transforms
 
+from colon_ai.train_location.DatasetClass_Location import ColonDatasetLocation
 
 
 class ColonDataModuleLocation(pl.LightningDataModule):
@@ -27,7 +28,7 @@ class ColonDataModuleLocation(pl.LightningDataModule):
 
     def setup(self, stage=None):
 
-        train_dataset = ColonDataset(root=self.root_dir_train, transform=self.my_transform)
+        train_dataset = ColonDatasetLocation(root=self.root_dir_train, transform=self.my_transform)
 
         # do the split
         len_train_dataset = len(train_dataset)

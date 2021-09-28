@@ -7,6 +7,8 @@ from torchvision.datasets import VisionDataset
 import cv2
 from torch.utils.data import DataLoader
 
+from colon_ai.pipeline.DatasetLocation_Inference import InferenceDatasetLocation
+from colon_ai.train_location.DataModelLocation import ColonDataModelLocation
 from colon_ai.traınıng.DataModelColon import ColonDataModel
 
 
@@ -18,7 +20,6 @@ class InferenceDatasetQuality(VisionDataset):
         self.sample_dirs = []  # image0,image1 ...
         for video_dir in self.video_dirs:
             self.sample_dirs += (sorted(Path(video_dir).iterdir())) # gets image and labels(folder)
-        print(self.sample_dirs)
         if num_samples:
             self.sample_dirs = self.sample_dirs[:num_samples]
 
@@ -26,9 +27,7 @@ class InferenceDatasetQuality(VisionDataset):
 
     def __getitem__(self, index):
         sample_dir = self.sample_dirs[index]
-
         colon= self._load_and_transform_colon(sample_dir)
-
         return colon
 
 
@@ -64,17 +63,78 @@ class InferenceDatasetQuality(VisionDataset):
         return len(self.sample_dirs)
 
 def show_ouput(model, dataloader, class_dict=None):
-
-    for  features in dataloader:
+    quality_labels=[]
+    dict_map = {'G':4,'M':3,'B':2,'p':1}
+    for features in dataloader:
         with torch.no_grad():
             features = features
             logits = model(features)
-            predictions = torch.argmax(logits, dim=1)
+            predictions = torch.argmax(logits,dim=1)
+            pred_numpy=predictions.numpy()
+            quality_labels.append(pred_numpy)
         break
 
-    fig, axes = plt.subplots(nrows=2, ncols=5,
-                             sharex=True, sharey=True)
+    #coversion
+    converted_arr=[]
+    count=0
+    result=""
+    output=[] #avg of the each 10 elements
+    output_label=[] #corresponding average quality label
+    calc=0
+    index=0
 
+    for num in quality_labels[0]:
+        converted_arr.append(class_dict[num])
+    print("converted array: ",converted_arr)
+    print("len converted array: ",len(converted_arr))
+
+    #calculation
+    for i in range(len(converted_arr)):
+        calc=calc+dict_map[converted_arr[i]]
+        count+=1
+        #print(calc)
+        index+=1
+        if count==10:
+            avg = calc / 10
+            if avg < 1.5:
+                result = "poor"
+            elif avg >= 1.5 and avg < 2.5:
+                result = "bad"
+            elif avg >= 2.5 and avg < 3.5:
+                result = "middle"
+            else:
+                result = "good"
+            output.append(avg)
+            output_label.append(result)
+            print("average quality "+"between frames "+str(index-10)+"-"+str(index)+ " is:",result)
+            count=0
+            calc=0
+
+
+    #adding the last remaining elements
+    sum_elem=0
+    remained_elem= len(converted_arr)%10
+    if remained_elem!=0:
+        for k in range(remained_elem):
+            sum_elem = sum_elem + dict_map[converted_arr[k-remained_elem]]
+        avg_add=sum_elem/remained_elem
+        if avg_add< 1.5:
+            result = "poor"
+        elif avg_add >= 1.5 and avg < 2.5:
+            result = "bad"
+        elif avg_add>= 2.5 and avg < 3.5:
+            result = "middle"
+        else:
+            result = "good"
+        output.append(avg_add)
+        output_label.append(result)
+        print("average quality " + "between frames " + str(len(converted_arr)-remained_elem) + "-" + str(len(converted_arr)) + " is:", result)
+        print("avg output: ",output)
+        print("avg output label: ", output_label)
+
+
+    fig, axes = plt.subplots(nrows=4, ncols=5,
+                             sharex=True, sharey=True)
 
     nhwc_img = np.transpose(features, axes=(0, 2, 3, 1))
 
@@ -88,7 +148,6 @@ def show_ouput(model, dataloader, class_dict=None):
             else:
                 ax.title.set_text(f'P: {predictions[idx]}')
             ax.axison = False
-
     else:
 
         for idx, ax in enumerate(axes.ravel()):
@@ -99,24 +158,72 @@ def show_ouput(model, dataloader, class_dict=None):
     plt.tight_layout()
     plt.show()
 
-#def calculation(model,dataloader,dict):
+def show_ouput_location(model, dataloader, class_dict=None):
+    location_labels=[]
+    location_dict = {'R':0, 'M':1, 'L':2}
+    for features in dataloader:
+        with torch.no_grad():
+            features = features
+            logits = model(features)
+            predictions = torch.argmax(logits,dim=1)
+            pred_numpy=predictions.numpy()
+            location_labels.append(pred_numpy)
+        break
+
+    #coversion
+    converted_arr=[]
+
+    for num in location_labels[0]:
+        converted_arr.append(class_dict[num])
+    print("converted array location: ",converted_arr)
+    print("len converted array location: ",len(converted_arr))
 
 
+    fig, axes = plt.subplots(nrows=4, ncols=5,
+                             sharex=True, sharey=True)
+
+    nhwc_img = np.transpose(features, axes=(0, 2, 3, 1))
+
+    if nhwc_img.shape[-1] == 1:
+        nhw_img = np.squeeze(nhwc_img.numpy(), axis=3)
+
+        for idx, ax in enumerate(axes.ravel()):
+            ax.imshow(nhw_img[idx], cmap='binary')
+            if class_dict is not None:
+                ax.title.set_text(f'P: {class_dict[predictions[idx].item()]}')
+            else:
+                ax.title.set_text(f'P: {predictions[idx]}')
+            ax.axison = False
+    else:
+
+        for idx, ax in enumerate(axes.ravel()):
+            ax.imshow(nhwc_img[idx])
+            if class_dict is not None:
+                ax.title.set_text(f'P: {class_dict[predictions[idx].item()]}')
+            ax.axison = False
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == '__main__':
-    print("hello")
-    #dataset = InferenceDatasetQuality('/home/beril/Thesis_Beril/Train_Labels_Quality/Video2')
-    #colon= dataset[0]
-    Test_Path="/home/beril/Thesis_Beril/Train_Labels_Quality/Video2"
-    quality_dict = {0: 'G', 1: 'M', 2: 'p', 3: 'B'}
-    test_dataset = InferenceDatasetQuality(root=Test_Path)
-    test_loader = DataLoader(test_dataset,batch_size=10)
-    checkpoint_model_path="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/traınıng/uncategorized/2jsc8uzm/checkpoints/epoch=64-val_loss=0.53-val_acc=0.83.ckpt"
-    pretrained_model = ColonDataModel.load_from_checkpoint(checkpoint_path= checkpoint_model_path)
-    pretrained_model.eval()
-    pretrained_model.freeze()
-    show_ouput(pretrained_model,test_loader,quality_dict)
+    print("Code is running...")
+    Test_Path="/home/beril/Thesis_Beril/Train_Labels/Video6"
+    # quality_dict = {0: 'G', 1: 'M', 2: 'p', 3: 'B'}
+    # test_dataset = InferenceDatasetQuality(root=Test_Path)
+    # test_loader = DataLoader(test_dataset,batch_size=len(test_dataset))
+    # checkpoint_model_path="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/traınıng/uncategorized/best_model/checkpoints/run4-epoch=149-val_loss=0.74-val_acc=0.80.ckpt"
+    # pretrained_model = ColonDataModel.load_from_checkpoint(checkpoint_path= checkpoint_model_path)
+    # pretrained_model.eval()
+    # pretrained_model.freeze()
+    # show_ouput(pretrained_model,test_loader,quality_dict)
 
-
+    #test location
+    location_dataset = InferenceDatasetLocation(root=Test_Path)
+    location_loader = DataLoader(location_dataset, batch_size=len(location_dataset))
+    location_dict = {0: 'R', 1: 'M', 2: 'L'}
+    checkpoint_model_path_loc="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/train_location/uncategorized/best_model_loc/checkpoints/run1--epoch=99-val_loss=0.14-val_acc=0.96.ckpt"
+    pretrained_model_loc = ColonDataModelLocation.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
+    pretrained_model_loc.eval()
+    pretrained_model_loc.freeze()
+    show_ouput_location(pretrained_model_loc, location_loader, location_dict)
 
 

@@ -81,7 +81,7 @@ def show_examples(model, datamodule, class_dict=None):
             predictions = torch.argmax(logits, dim=1)
         break
 
-    fig, axes = plt.subplots(nrows=3, ncols=5,
+    fig, axes = plt.subplots(nrows=1, ncols=2,
                              sharex=True, sharey=True)
 
 
@@ -131,10 +131,10 @@ class Datasetview2D_Loc(Callback):
 
 def train_part():
     seed_everything(123)
-    location_dict= {"R":0,"L":2,"M":1}
-    hparams = {'weight_decay': 2.6746010987811638e-05,
-               'batch_size': 120,
-               'learning_rate': 0.0002656505281148348,
+    location_dict = {0: 'R', 1: 'M', 2: 'L'}
+    hparams = {'weight_decay':  1e-4,
+               'batch_size': 32,
+               'learning_rate': 2e-4,
                'num_workers': 4,
                'gpus': 1,
                'test': 1
@@ -143,8 +143,8 @@ def train_part():
     datamodule_colon=ColonDataModuleLocation(hparams)
 
     #--------------------------------------------------------------------------------------------
-    checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.2f}-{val_acc:.2f}', monitor="val_loss", verbose=True)
-    trainer=Trainer( max_epochs=64, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D_Loc(), checkpoint_callback], log_every_n_steps=5)
+    checkpoint_callback = ModelCheckpoint(filename='run1--{epoch}-{val_loss:.2f}-{val_acc:.2f}', verbose=True)
+    trainer=Trainer( max_epochs=2, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D_Loc(), checkpoint_callback], log_every_n_steps=5)
     trainer.fit(model,datamodule_colon)
     trainer.test(datamodule=datamodule_colon)
     show_examples(model,datamodule_colon,class_dict=location_dict)
