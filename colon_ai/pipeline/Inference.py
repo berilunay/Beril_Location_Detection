@@ -1,8 +1,14 @@
+import os
 import torch
 import numpy as np
 from pathlib import Path
 
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+from cv2 import imshow
 from matplotlib import pyplot as plt
+from numpy import shape
 from torchvision.datasets import VisionDataset
 import cv2
 from torch.utils.data import DataLoader
@@ -203,6 +209,46 @@ def show_ouput_location(model, dataloader, class_dict=None):
             ax.axison = False
     plt.tight_layout()
     plt.show()
+    return converted_arr
+
+def show_images_with_labels(dataloader,output_array):
+    save_path="/home/beril/Thesis_Beril/Inference/Frames_Loc"
+    index=0
+    for images in dataloader:
+        input_img = images
+        c, t, h, w = input_img.shape
+        input_img = torch.permute(input_img,(0, 2, 3, 1))
+        input_img_np=input_img.numpy()
+
+    for i in range(len(input_img)):
+        img=input_img_np[i]
+        im = Image.fromarray((img*255).astype('uint8'), 'RGB')
+        label=output_array[i]
+        I1 = ImageDraw.Draw(im)
+        I1.text((28, 36), "Location:"+str(label), fill=(150, 48, 27))
+        # plt.imshow(im)
+        # plt.show()
+        file_path = os.path.join(save_path, "Image" + f'{index:05d}' + ".png")
+        im.save(file_path)
+        index=index+1
+
+def image_to_video():
+    image_folder = "/home/beril/Thesis_Beril/Inference/Frames_Loc"
+    video_name = "/home/beril/Thesis_Beril/Inference/Frames_Concat/video.mp4"
+
+    images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
+    frame = cv2.imread(os.path.join(image_folder, images[0]))
+    height, width, layers = frame.shape
+    fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+
+    video = cv2.VideoWriter(video_name, fourcc, 1, (width, height))
+
+    for image in sorted(images):
+        video.write(cv2.imread(os.path.join(image_folder, image)))
+
+    cv2.destroyAllWindows()
+    video.release()
+
 
 if __name__ == '__main__':
     print("Code is running...")
@@ -224,6 +270,9 @@ if __name__ == '__main__':
     pretrained_model_loc = ColonDataModelLocation.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
     pretrained_model_loc.eval()
     pretrained_model_loc.freeze()
-    show_ouput_location(pretrained_model_loc, location_loader, location_dict)
+    conv_arr_loc=show_ouput_location(pretrained_model_loc, location_loader, location_dict)
+    show_images_with_labels(location_loader,conv_arr_loc)
+    image_to_video()
+
 
 
