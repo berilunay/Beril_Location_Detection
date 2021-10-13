@@ -143,7 +143,7 @@ def train_part():
     datamodule_colon=ColonDataModuleLocation(hparams)
 
     #--------------------------------------------------------------------------------------------
-    checkpoint_callback = ModelCheckpoint(filename='run1--{epoch}-{val_loss:.2f}-{val_acc:.2f}', verbose=True)
+    checkpoint_callback = ModelCheckpoint(filename='run1--{epoch}-{val_loss:.2f}-{val_acc:.2f}',monitor="val_loss", verbose=True)
     trainer=Trainer( max_epochs=2, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D_Loc(), checkpoint_callback], log_every_n_steps=5)
     trainer.fit(model,datamodule_colon)
     trainer.test(datamodule=datamodule_colon)

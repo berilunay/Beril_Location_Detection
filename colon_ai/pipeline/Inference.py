@@ -68,7 +68,8 @@ class InferenceDatasetQuality(VisionDataset):
     def __len__(self):
         return len(self.sample_dirs)
 
-def show_ouput(model, dataloader, class_dict=None):
+#print the average quality for every 10 frames and visualize it with grid
+def show_ouput_quality(model, dataloader, class_dict=None):
     quality_labels=[]
     dict_map = {'G':4,'M':3,'B':2,'p':1}
     for features in dataloader:
@@ -115,6 +116,10 @@ def show_ouput(model, dataloader, class_dict=None):
             print("average quality "+"between frames "+str(index-10)+"-"+str(index)+ " is:",result)
             count=0
             calc=0
+
+    #checking the avg quality labels for 10 frame
+    print("output_label_avg: ", output_label)
+    print("output_label_avg length: ", len(output_label))
 
 
     #adding the last remaining elements
@@ -164,6 +169,9 @@ def show_ouput(model, dataloader, class_dict=None):
     plt.tight_layout()
     plt.show()
 
+    return converted_arr,output_label
+
+#returns the predicted location labels and visualizes the image with predicted labels
 def show_ouput_location(model, dataloader, class_dict=None):
     location_labels=[]
     location_dict = {'R':0, 'M':1, 'L':2}
@@ -211,6 +219,7 @@ def show_ouput_location(model, dataloader, class_dict=None):
     plt.show()
     return converted_arr
 
+#puts predicted location text onto corresponding scope image and saves it
 def show_images_with_labels(dataloader,output_array):
     save_path="/home/beril/Thesis_Beril/Inference/Frames_Loc"
     index=0
@@ -232,16 +241,90 @@ def show_images_with_labels(dataloader,output_array):
         im.save(file_path)
         index=index+1
 
+#puts predicted quality text onto corresponding colon image and saves it
+def show_images_with_labels_quality(dataloader,output_array):
+    save_path="/home/beril/Thesis_Beril/Inference/Frames_Quality"
+    index=0
+    for images in dataloader:
+        input_img = images
+        c, t, h, w = input_img.shape
+        input_img = torch.permute(input_img,(0, 2, 3, 1))
+        input_img_np=input_img.numpy()
+
+
+    for i in range(len(input_img)):
+        img=input_img_np[i]
+        im = Image.fromarray((img*255).astype('uint8'), 'RGB')
+        label=output_array[i]
+        I1 = ImageDraw.Draw(im)
+        I1.text((28, 36), "Quality:"+str(label), fill=(9, 28, 173))
+        # plt.imshow(im)
+        # plt.show()
+        file_path = os.path.join(save_path, "Image" + f'{index:05d}' + ".png")
+        im.save(file_path)
+        index=index+1
+
+#concats scope and colon view into one image
+def concat_images():
+    main_path="/home/beril/Thesis_Beril/Inference/Frames_Loc"
+    #copy_path="/home/beril/Thesis_Beril/Inference/Frames_Concat"
+    copy_path = "/home/beril/Thesis_Beril/Inference/Frames_Concat/Video6_temp"
+
+    count=0
+    for file_name in sorted(os.listdir(main_path)):
+        im1_path = '/home/beril/Thesis_Beril/Inference/AVG_Quality_Concat/'+str(file_name)
+        img1 = Image.open(im1_path)
+        im2_path='/home/beril/Thesis_Beril/Inference/Frames_Loc/' + str(file_name)
+        img2 = Image.open(im2_path)
+        print(im2_path)
+        new_img = Image.new('RGB', (img1.width + img2.width, img1.height))
+        new_img.paste(img1, (0, 0))
+        new_img.paste(img2, (img1.width, 0))
+        file_path = os.path.join(copy_path, "Image_Concat" + f'{count:05d}' + ".png")
+        new_img.save(file_path)
+        count = count+ 1
+
+def concat_quality_and_avg_quality(avg_quality_out_arr):
+    quality_frame_path="/home/beril/Thesis_Beril/Inference/Frames_Quality"
+    save_concat_path="/home/beril/Thesis_Beril/Inference/AVG_Quality_Concat"
+    count=0
+    length_array=0
+
+    for file_name in sorted(os.listdir(quality_frame_path)):
+        im1_path = '/home/beril/Thesis_Beril/Inference/Frames_Quality/' + str(file_name)
+        img1 = Image.open(im1_path)
+        if(count!=0 and count%10==0):
+            img2= Image.new('RGB', (img1.width, 50), color=(172, 184, 191)) #avg_quality
+            I1 = ImageDraw.Draw(img2)
+            I1.text((25, 25), "Average quality is: " + str(avg_quality_out_arr[length_array]), fill=(25, 25, 26))
+            # plt.imshow(img2)
+            # plt.show()
+            new_img = Image.new('RGB', (img1.width, img1.height + img2.height))
+            new_img.paste(img1, (0, 0))
+            new_img.paste(img2, (0, img1.height))
+            file_path = os.path.join(save_concat_path, "Image" + f'{count:05d}' + ".png")
+            new_img.save(file_path)
+            length_array=length_array+1
+        else:
+            file_path_org = os.path.join(save_concat_path, "Image" + f'{count:05d}' + ".png")
+            img1.save(file_path_org)
+        count = count + 1
+
+
+#creates video from image frames
 def image_to_video():
-    image_folder = "/home/beril/Thesis_Beril/Inference/Frames_Loc"
-    video_name = "/home/beril/Thesis_Beril/Inference/Frames_Concat/video.mp4"
+    print("converting to video...")
+    #image_folder = "/home/beril/Thesis_Beril/Inference/Frames_Concat"
+    image_folder = "/home/beril/Thesis_Beril/Inference/Frames_Concat/Video6_temp"
+    video_name = "/home/beril/Thesis_Beril/Inference/Video_output/video6_temp.mp4"
 
     images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
     frame = cv2.imread(os.path.join(image_folder, images[0]))
     height, width, layers = frame.shape
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 
-    video = cv2.VideoWriter(video_name, fourcc, 1, (width, height))
+    #video = cv2.VideoWriter(video_name, fourcc, 1, (width, height))
+    video = cv2.VideoWriter(video_name, fourcc, 1, (width, 274))
 
     for image in sorted(images):
         video.write(cv2.imread(os.path.join(image_folder, image)))
@@ -252,27 +335,39 @@ def image_to_video():
 
 if __name__ == '__main__':
     print("Code is running...")
-    Test_Path="/home/beril/Thesis_Beril/Train_Labels/Video6"
+    # Test_Path="/home/beril/Thesis_Beril/Train_Labels/Video6"
     # quality_dict = {0: 'G', 1: 'M', 2: 'p', 3: 'B'}
-    # test_dataset = InferenceDatasetQuality(root=Test_Path)
-    # test_loader = DataLoader(test_dataset,batch_size=len(test_dataset))
+    # quality_dataset = InferenceDatasetQuality(root=Test_Path)
+    # quality_loader = DataLoader(quality_dataset, batch_size=len(quality_dataset))
     # checkpoint_model_path="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/traınıng/uncategorized/best_model/checkpoints/run4-epoch=149-val_loss=0.74-val_acc=0.80.ckpt"
     # pretrained_model = ColonDataModel.load_from_checkpoint(checkpoint_path= checkpoint_model_path)
     # pretrained_model.eval()
     # pretrained_model.freeze()
-    # show_ouput(pretrained_model,test_loader,quality_dict)
+    # output_arr_quality,output_avg_qua_label=show_ouput_quality(pretrained_model, quality_loader, quality_dict)
+    #show_images_with_labels_quality(test_loader,output_arr_quality)
+    #concat_quality_and_avg_quality(output_avg_qua_label)
+
+
+
 
     #test location
-    location_dataset = InferenceDatasetLocation(root=Test_Path)
-    location_loader = DataLoader(location_dataset, batch_size=len(location_dataset))
-    location_dict = {0: 'R', 1: 'M', 2: 'L'}
-    checkpoint_model_path_loc="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/train_location/uncategorized/best_model_loc/checkpoints/run1--epoch=99-val_loss=0.14-val_acc=0.96.ckpt"
-    pretrained_model_loc = ColonDataModelLocation.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
-    pretrained_model_loc.eval()
-    pretrained_model_loc.freeze()
-    conv_arr_loc=show_ouput_location(pretrained_model_loc, location_loader, location_dict)
-    show_images_with_labels(location_loader,conv_arr_loc)
+    # location_dataset = InferenceDatasetLocation(root=Test_Path)
+    # location_loader = DataLoader(location_dataset, batch_size=len(location_dataset))
+    # location_dict = {0: 'R', 1: 'M', 2: 'L'}
+    # checkpoint_model_path_loc="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/train_location/uncategorized/best_model_loc/checkpoints/run1--epoch=99-val_loss=0.14-val_acc=0.96.ckpt"
+    # pretrained_model_loc = ColonDataModelLocation.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
+    # pretrained_model_loc.eval()
+    # pretrained_model_loc.freeze()
+    # conv_arr_loc=show_ouput_location(pretrained_model_loc, location_loader, location_dict)
+    # show_images_with_labels(location_loader,conv_arr_loc)
+    #image_to_video()
+
+    #test_output_video
+    #concat_images()
     image_to_video()
+
+
+
 
 
 

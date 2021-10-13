@@ -176,11 +176,13 @@ def train_part():
     datamodule_colon=ColonDataModule(hparams)
 
     #-----------------------------------------------------------------------------------------------------------
-    #checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.2f}-{val_acc:.2f}', monitor="val_loss", verbose=True)
-    checkpoint_callback = ModelCheckpoint(filename='run4-{epoch}-{val_loss:.2f}-{val_acc:.2f}',verbose=True)
+    checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.2f}-{val_acc:.2f}', monitor="val_loss", verbose=True)
+
+    #checkpoint_callback = ModelCheckpoint(filename='run4-{epoch}-{val_loss:.2f}-{val_acc:.2f}',verbose=True)
     trainer=Trainer( max_epochs=150, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D(), checkpoint_callback], log_every_n_steps=5)
     trainer.fit(model,datamodule_colon)
     trainer.test(datamodule=datamodule_colon)
+
     show_examples(model,datamodule_colon,class_dict=location_dict)
 
 
