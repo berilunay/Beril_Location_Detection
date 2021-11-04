@@ -11,7 +11,7 @@ from pytorch_lightning import seed_everything
 from torchmetrics import Accuracy
 import wandb
 import torchvision
-from pytorch_lightning.callbacks import Callback
+from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 
 from colon_ai.VideoCNN_Quality.Datamodule_Quality import VideoCNNDataModuleQuality
 
@@ -116,27 +116,28 @@ def train_part():
     seed_everything(123)
     #args = args_part()
 
-    hparams = {'weight_decay': 3.28772374916662e-05,
-               'batch_size': 2,
-               'learning_rate': 1.6551783701415136e-05,
+    hparams = {'weight_decay':  0.000108700739726235,
+               'batch_size': 3,
+               'learning_rate': 2.9440497094097533e-05,
                'num_workers': 4,
                'gpus': 1,
                'test':1
                }
     classification_module = VideoClassificationLightningModuleQuality(hparams)
     data_module = VideoCNNDataModuleQuality(hparams)
-    trainer = pytorch_lightning.Trainer(max_epochs=80, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=Datasetview())
+    checkpoint_callback = ModelCheckpoint(filename='runvideobest--{epoch}-{val_loss:.2f}-{val_acc:.2f}', monitor="val_loss",
+                                           verbose=True)
+    trainer = pytorch_lightning.Trainer(max_epochs=60, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=[Datasetview(), checkpoint_callback])
     trainer.fit(classification_module, data_module)
     trainer.test(datamodule=data_module)
 
     # ---------------------------------------------------------------------------------------------------
-    # classification_module = VideoClassificationLightningModule(hparams=args)
-    # data_module = VideoCNNDataModule(hparams=args)
-    #
-    # trainer= pytorch_lightning.Trainer(max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
-    # trainer.fit(classification_module, data_module)
-    # trainer.test(datamodule=data_module)
 
+    # checkpoint_model_path="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/VideoCNN_Quality/uncategorized/2p7dv39i/checkpoints/runvideobest--epoch=119-val_loss=0.75-val_acc=1.00.ckpt"
+    # pretrained_model = VideoClassificationLightningModuleQuality.load_from_checkpoint(checkpoint_path=checkpoint_model_path)
+    # trainer = pytorch_lightning.Trainer()
+    # trainer.fit(pretrained_model)
+    # trainer.test(pretrained_model)
 
 if __name__ == '__main__':
     print("...........Training Starts............", "\n")

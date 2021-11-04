@@ -120,16 +120,18 @@ def train_part():
     seed_everything(123)
     #args = args_part()
 
-    hparams = {'weight_decay': 1e-4,
-               'batch_size': 4,
-               'learning_rate': 1e-4,
-               'num_workers': 1,
+    hparams = {'weight_decay':  0.0003517185102217208,
+               'batch_size': 2,
+               'learning_rate':  0.0004052450395570475,
+               'num_workers': 4,
                'gpus': 1,
                'test':1
                }
     classification_module = VideoClassificationLightningModule(hparams)
     data_module = VideoCNNDataModule(hparams)
-    trainer = pytorch_lightning.Trainer(max_epochs=80, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=Datasetview())
+    trainer = pytorch_lightning.Trainer(max_epochs=400, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=Datasetview())
+    # trainer = pytorch_lightning.Trainer(max_epochs=400, overfit_batches=1, logger=WandbLogger(),
+    #                                     callbacks=Datasetview())
     trainer.fit(classification_module, data_module)
     trainer.test(datamodule=data_module)
 

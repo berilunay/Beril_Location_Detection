@@ -11,6 +11,7 @@ from torch.optim import Adam
 from torch.nn import functional as F
 from pytorch_lightning import Trainer
 from pytorch_lightning import seed_everything
+from torchmetrics import F1
 
 import wandb
 
@@ -37,6 +38,9 @@ class ColonDataModelLocation(LightningModule):
         loss= F.cross_entropy(out,targets)
         preds = torch.argmax(out, dim=1)
         acc = accuracy(preds, targets)
+        # f1 = F1(num_classes=3)
+        # f1_out=f1(preds, targets)
+        # self.log('F1',f1_out)
         self.log('train_loss', loss)
         self.log('train_acc', acc)
         return loss
@@ -132,9 +136,9 @@ class Datasetview2D_Loc(Callback):
 def train_part():
     seed_everything(123)
     location_dict = {0: 'R', 1: 'M', 2: 'L'}
-    hparams = {'weight_decay':  1e-4,
-               'batch_size': 32,
-               'learning_rate': 2e-4,
+    hparams = {'weight_decay':   4.649222971707528e-05,
+               'batch_size': 55,
+               'learning_rate': 6.0287118453042406e-05,
                'num_workers': 4,
                'gpus': 1,
                'test': 1
@@ -143,11 +147,20 @@ def train_part():
     datamodule_colon=ColonDataModuleLocation(hparams)
 
     #--------------------------------------------------------------------------------------------
-    checkpoint_callback = ModelCheckpoint(filename='run1--{epoch}-{val_loss:.2f}-{val_acc:.2f}',monitor="val_loss", verbose=True)
-    trainer=Trainer( max_epochs=2, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D_Loc(), checkpoint_callback], log_every_n_steps=5)
+    checkpoint_callback = ModelCheckpoint(filename='testrun30--{epoch}-{val_loss:.2f}-{val_acc:.2f}-{train_loss:.2f}-{train_acc:.2f}',monitor="val_loss", verbose=True)
+    trainer=Trainer( max_epochs=30, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D_Loc(), checkpoint_callback])
+    #trainer = Trainer(max_epochs=500, gpus=hparams["gpus"],logger=WandbLogger(),log_every_n_steps=1,overfit_batches=0.001)
+
     trainer.fit(model,datamodule_colon)
     trainer.test(datamodule=datamodule_colon)
     show_examples(model,datamodule_colon,class_dict=location_dict)
+    #------------------------------------------------------------------------------
+    # trainer = Trainer(gpus=hparams["gpus"])
+    # checkpoint_model_path_loc = "/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/train_location/uncategorized/hyvaljr8/checkpoints/run28/10--epoch=23-val_loss=0.03-val_acc=0.99.ckpt"
+    # pretrained_model_loc = ColonDataModelLocation.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
+    # pretrained_model_loc.eval()
+    # result=trainer.test(pretrained_model_loc,datamodule=datamodule_colon)
+
 
 
 if __name__ == '__main__':

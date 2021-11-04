@@ -14,7 +14,7 @@ def objective(trial):
     # create a trainer
     trainer = pytorch_lightning.Trainer(
         logger=False,
-        max_epochs=80,
+        max_epochs=50,
         gpus=1,
         #early_stop_callback=PyTorchLightningPruningCallback(trial, monitor="val_acc"),  # early stopping
         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_acc")]
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     print("...........Testing Hyperparamater Starts............", "\n")
     pruner = optuna.pruners.NopPruner()
     study = optuna.create_study(direction="maximize", pruner=pruner)
-    study.optimize(objective, n_trials=40)
+    study.optimize(objective, n_trials=25)
     plot_optimization_history(study)
     #
     print("Number of finished trials: {}".format(len(study.trials)))

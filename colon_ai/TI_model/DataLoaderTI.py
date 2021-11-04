@@ -4,24 +4,25 @@ from torch.utils.data import DataLoader
 from torch.utils.data import random_split
 from torchvision import transforms
 
-from colon_ai.traınıng.DatasetClass import ColonDataset
+from colon_ai.TI_model.DatasetClassTI import ColonDatasetTI
 
 
-class ColonDataModule(pl.LightningDataModule):
+
+class ColonDataModuleTI(pl.LightningDataModule):
     @property
     def hparams(self):
         return self._hparams
 
     def __init__(self, hparams, mean=None, std=None):
-        super(ColonDataModule, self).__init__()
+        super(ColonDataModuleTI, self).__init__()
         #self.save_hyperparameters(hparams)
         self.hparams = hparams
-        self.root_dir_train = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Train_Quality_Labels"
-        self.root_dir_test = "/home/beril/Thesis_Beril/Dataset_preprocess_new/test_quality_labels"
+        self.root_dir_train = "/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Train_TI_Labels"
+        self.root_dir_test = "/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Test_TI_Labels"
 
 
         self.my_transform = transforms.Compose([
-            #transforms.RandomCrop((224, 224)),
+            transforms.RandomCrop((224, 224)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomRotation(degrees=95),
             transforms.ColorJitter(brightness=0.5)
@@ -29,8 +30,8 @@ class ColonDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
 
-        train_dataset = ColonDataset(root=self.root_dir_train,transform=self.my_transform)
-        test_dataset=ColonDataset(root=self.root_dir_test)
+        train_dataset = ColonDatasetTI(root=self.root_dir_train,transform=self.my_transform)
+        test_dataset=ColonDatasetTI(root=self.root_dir_test)
 
         # do the split
         len_train_dataset = len(train_dataset)
@@ -54,15 +55,13 @@ class ColonDataModule(pl.LightningDataModule):
             self.test_dataset = test_dataset
 
     def train_dataloader(self):
-        #return DataLoader(self.train_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.train_dataset, self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
 
     def val_dataloader(self):
-        #return DataLoader(self.val_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.val_dataset,  self.hparams["batch_size"],num_workers=self.hparams["num_workers"])
+
     def test_dataloader(self):
-        #return DataLoader(self.test_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.test_dataset,  self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
     @hparams.setter

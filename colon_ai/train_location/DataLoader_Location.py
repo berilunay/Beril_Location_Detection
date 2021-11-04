@@ -16,7 +16,8 @@ class ColonDataModuleLocation(pl.LightningDataModule):
         super(ColonDataModuleLocation, self).__init__()
         #self.save_hyperparameters(hparams)
         self.hparams = hparams
-        self.root_dir_train = "/home/beril/Thesis_Beril/Train_Labels"
+        self.root_dir_train = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Train_Location_Labels"
+        self.root_dir_test="/home/beril/Thesis_Beril/Dataset_preprocess_new/test_location_labels"
 
 
         self.my_transform = transforms.Compose([
@@ -28,21 +29,23 @@ class ColonDataModuleLocation(pl.LightningDataModule):
 
     def setup(self, stage=None):
 
-        train_dataset = ColonDatasetLocation(root=self.root_dir_train, transform=self.my_transform)
+        train_dataset = ColonDatasetLocation(root=self.root_dir_train,transform=self.my_transform)
 
         # do the split
         len_train_dataset = len(train_dataset)
-        len_train_splitted = int(0.6 * len_train_dataset)
+        len_train_splitted = int(0.75 * len_train_dataset)
         len_val = len_train_dataset - len_train_splitted
 
         train_dataset, val_dataset = random_split(train_dataset, [len_train_splitted, len_val])
 
+        test_dataset = ColonDatasetLocation(root=self.root_dir_test)
         # do the splıt agaın to splıt val ın val + test
-        len_val_dataset = len(val_dataset)
-        len_val_splitted = int(0.5 * len_val_dataset)
-        len_test = len_val_dataset - len_val_splitted
-
-        val_dataset, test_dataset = random_split(val_dataset, [len_val_splitted, len_test])
+        # len_val_dataset = len(val_dataset)
+        # len_val_splitted = int(0.5 * len_val_dataset)
+        # #len_val_splitted = int(0.6 * len_val_dataset)
+        # len_test = len_val_dataset - len_val_splitted
+        #
+        # val_dataset, test_dataset = random_split(val_dataset, [len_val_splitted, len_test])
 
         if stage == "fit" or stage is None:
             self.train_dataset = train_dataset
@@ -50,6 +53,10 @@ class ColonDataModuleLocation(pl.LightningDataModule):
 
         if stage == "test" or stage is None:
             self.test_dataset = test_dataset
+
+        print('Train data set:', len(train_dataset))
+        print('Test data set:', len(test_dataset))
+        print('Valid data set:', len(val_dataset))
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, self.hparams["batch_size"], num_workers=self.hparams["num_workers"])

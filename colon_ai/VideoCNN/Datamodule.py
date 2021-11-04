@@ -39,11 +39,11 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self, hparams):
         super(VideoCNNDataModule, self).__init__()
         self.hparams = hparams
-        self._DATA_PATH_TRAIN = "/home/beril/Thesis_Beril/Dataset_VideoCNN/Train_Location_Video"
-        self._DATA_PATH_TEST = "/home/beril/Thesis_Beril/Dataset_VideoCNN/Test_Location_Video"
-        self._DATA_PATH_VAL = "/home/beril/Thesis_Beril/Dataset_VideoCNN/Val_Location_Video"
+        self._DATA_PATH_TRAIN = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Location_Labels/location_train"
+        self._DATA_PATH_TEST = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Location_Labels/location_test"
+        self._DATA_PATH_VAL = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Location_Labels/location_validation"
         #self._CLIP_DURATION = self.hparams.clip_duration
-        self._CLIP_DURATION = 0.3 # Duration of sampled clip for each video 0.2 before
+        self._CLIP_DURATION = 0.5 # Duration of sampled clip for each video 0.2 before
         self.train_transforms = Compose(
             [
                 ApplyTransformToKey(
@@ -104,9 +104,8 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
         )
         test_dataset=LabeledVideoDataset(
             labeled_video_paths=test_dataset_path,
-            clip_sampler=pytorchvideo.data.make_clip_sampler("random", self._CLIP_DURATION),
+            clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
             decode_audio=False,
-            transform = self.train_transforms
         )
 
         if stage == "fit" or stage is None:
@@ -131,3 +130,5 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
     @hparams.setter
     def hparams(self, value):
         self._hparams = value
+
+

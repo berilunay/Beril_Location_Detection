@@ -12,7 +12,7 @@ def objective(trial):
     # create a trainer
     trainer = pytorch_lightning.Trainer(
         logger=False,
-        max_epochs=80,
+        max_epochs=60,
         gpus=1,
         #early_stop_callback=PyTorchLightningPruningCallback(trial, monitor="val_acc"),  # early stopping
         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_acc")]
@@ -20,7 +20,7 @@ def objective(trial):
 
     # here we sample the hyper params, similar as in our old random search
     trial_hparams = {"weight_decay": trial.suggest_loguniform("weight_decay", 1e-5, 5e-4),
-                    "batch_size": trial.suggest_int("batch_size", 2, 8),
+                    "batch_size": trial.suggest_int("batch_size", 2, 4),
                     "learning_rate": trial.suggest_loguniform("learning_rate", 1e-6, 5e-4),
                     "num_workers":1,
                     'gpus': 1

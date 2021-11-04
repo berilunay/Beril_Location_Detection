@@ -39,11 +39,11 @@ class VideoCNNDataModuleQuality(pytorch_lightning.LightningDataModule):
     def __init__(self, hparams):
         super(VideoCNNDataModuleQuality, self).__init__()
         self.hparams = hparams
-        self._DATA_PATH_TRAIN = "/home/beril/Thesis_Beril/Dataset_Quality_VideoCNN/Train_Quality_Video"
-        self._DATA_PATH_TEST = "/home/beril/Thesis_Beril/Dataset_Quality_VideoCNN/Test_Quality_Video"
-        self._DATA_PATH_VAL = "/home/beril/Thesis_Beril/Dataset_Quality_VideoCNN/Val_Quality_Video"
+        self._DATA_PATH_TRAIN = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_train"
+        self._DATA_PATH_TEST = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_test"
+        self._DATA_PATH_VAL = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_validation"
         #self._CLIP_DURATION = self.hparams.clip_duration
-        self._CLIP_DURATION = 0.3 # Duration of sampled clip for each video 0.2 before
+        self._CLIP_DURATION = 0.6 # Duration of sampled clip for each video 0.2 before
         self.train_transforms = Compose(
             [
                 ApplyTransformToKey(
@@ -104,7 +104,7 @@ class VideoCNNDataModuleQuality(pytorch_lightning.LightningDataModule):
         )
         test_dataset=LabeledVideoDataset(
             labeled_video_paths=test_dataset_path,
-            clip_sampler=pytorchvideo.data.make_clip_sampler("random", self._CLIP_DURATION),
+            clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
             decode_audio=False,
             transform = self.train_transforms
         )
