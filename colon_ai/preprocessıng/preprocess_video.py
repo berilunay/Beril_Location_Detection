@@ -120,7 +120,7 @@ def new_model_labels():
 
 def process_image_newmodel(video_name, current, filename):
     im_path = f'/home/beril/Thesis_Beril/Dataset_preprocess_new/Images/{video_name}/' + str(filename)
-    copy_path = f'/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/{video_name}/Image' + f'{current:05d}'
+    copy_path = f'/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Train_TI_Labels/{video_name}/Image' + f'{current:05d}'
 
     try:
         if not os.path.exists(copy_path):
@@ -144,11 +144,16 @@ def process_image_newmodel(video_name, current, filename):
     returned_text_quality = detect_empty_image(file_path1)
     #create_txt_qua(label_path, returned_text)
 
+    im4 = im.crop((unit, 230, 1910, 850))
+    file_path3 = os.path.join(copy_path, "3D" + ".png")
+    im4.save(file_path3)
+
     im3 = im.crop((unit * 1.4, 30, 1790, 232))#image of TI
     file_path2 = os.path.join(copy_path, "Location" + ".png")
     im3.save(file_path2)
     returned_text_ill = detect_empty_image(file_path2)
     label="N"
+
 
     if (returned_text_ill=="TI" and returned_text_quality!="p"):
         create_txt_qua(label_path, returned_text_ill)
@@ -197,6 +202,7 @@ def process_quality(video_name, current, filename):
     im3.save(file_path)
     returned_text = detect_empty_image(file_path)
     create_txt_qua(new_path, returned_text)
+
 
     if (returned_text != "G" and returned_text != "M" and returned_text != "B"):
         print("The quality is empty: ", current)
@@ -337,14 +343,14 @@ def create_video_folder_quality(video_name,count,dir_name):
 
 
 if __name__ == '__main__':
-    #ew_model_labels()
+    new_model_labels()
     #conv_video2_image()
     #trial_labels()
     #create_train_label_quality()
 
-    video_path="/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Video7"
-    filenames = sorted(os.listdir(video_path))
-    print("lenght: ",len(filenames))
+    # video_path="/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Video7"
+    # filenames = sorted(os.listdir(video_path))
+    # print("lenght: ",len(filenames))
     #video_label_location()
     #video_label_quality()
 

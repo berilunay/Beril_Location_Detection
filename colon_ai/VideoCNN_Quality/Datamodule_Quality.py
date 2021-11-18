@@ -65,7 +65,7 @@ class VideoCNNDataModuleQuality(pytorch_lightning.LightningDataModule):
     def dataset_path(self,dataset_path):
         dir_path = pathlib.Path(dataset_path)
         labeled_video_paths = []
-        labels = ["G","B","M","p"]
+        labels = ["G","B","M"]
         for label in labels:
             label_path = dir_path / label
             video_paths = sorted(label_path.iterdir())
@@ -106,7 +106,7 @@ class VideoCNNDataModuleQuality(pytorch_lightning.LightningDataModule):
             labeled_video_paths=test_dataset_path,
             clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
             decode_audio=False,
-            transform = self.train_transforms
+            transform=self.train_transforms
         )
 
         if stage == "fit" or stage is None:

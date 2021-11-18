@@ -12,7 +12,7 @@ from torchmetrics import Accuracy
 import wandb
 import torchvision
 from pytorch_lightning.callbacks import Callback, ModelCheckpoint
-
+from pytorch_lightning.metrics.functional import accuracy
 from colon_ai.VideoCNN_Quality.Datamodule_Quality import VideoCNNDataModuleQuality
 
 
@@ -30,7 +30,7 @@ class VideoClassificationLightningModuleQuality(pytorch_lightning.LightningModul
         return pytorchvideo.models.resnet.create_resnet(
             input_channel=3,  # RGB input from Kinetics
             model_depth=50,  # For the tutorial let's just use a 50 layer network
-            model_num_class=4,  # Kinetics has 400 classes so we need out final head to align
+            model_num_class=3,  # Kinetics has 400 classes so we need out final head to align
             norm=nn.BatchNorm3d,
             activation=nn.ReLU,
         )
@@ -44,6 +44,7 @@ class VideoClassificationLightningModuleQuality(pytorch_lightning.LightningModul
         y_hat = self.model(batch["video"])
         loss = F.cross_entropy(y_hat, batch["label"])
         acc = self.train_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
+        #acc = accuracy(torch.argmax(y_hat, dim=1), batch["label"])
         self.log("train_loss", loss)
         # self.log("train_acc", acc, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("train_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -56,6 +57,7 @@ class VideoClassificationLightningModuleQuality(pytorch_lightning.LightningModul
         # for index in probs:
         #     print("max prob class: ",torch.argmax(index))
         acc = self.val_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
+        #acc = accuracy(torch.argmax(y_hat, dim=1), batch["label"])
         self.log("val_loss", loss)
         self.log("val_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
         return loss
@@ -64,6 +66,7 @@ class VideoClassificationLightningModuleQuality(pytorch_lightning.LightningModul
         y_hat = self.model(batch["video"])
         loss = F.cross_entropy(y_hat, batch["label"])
         acc = self.test_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
+        #acc = accuracy(torch.argmax(y_hat, dim=1), batch["label"])
         self.log("test_loss", loss)
         self.log("test_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
         return loss
@@ -125,7 +128,7 @@ def train_part():
                }
     classification_module = VideoClassificationLightningModuleQuality(hparams)
     data_module = VideoCNNDataModuleQuality(hparams)
-    checkpoint_callback = ModelCheckpoint(filename='runvideobest--{epoch}-{val_loss:.2f}-{val_acc:.2f}', monitor="val_loss",
+    checkpoint_callback = ModelCheckpoint(filename='test--{epoch}-{val_loss:.2f}-{val_acc:.2f}', monitor="val_loss",
                                            verbose=True)
     trainer = pytorch_lightning.Trainer(max_epochs=60, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=[Datasetview(), checkpoint_callback])
     trainer.fit(classification_module, data_module)

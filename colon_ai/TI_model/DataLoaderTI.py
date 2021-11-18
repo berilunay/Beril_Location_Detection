@@ -22,7 +22,6 @@ class ColonDataModuleTI(pl.LightningDataModule):
 
 
         self.my_transform = transforms.Compose([
-            transforms.RandomCrop((224, 224)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomRotation(degrees=95),
             transforms.ColorJitter(brightness=0.5)
