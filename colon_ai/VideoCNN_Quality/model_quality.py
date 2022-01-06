@@ -13,6 +13,8 @@ import wandb
 import torchvision
 from pytorch_lightning.callbacks import Callback, ModelCheckpoint
 from pytorch_lightning.metrics.functional import accuracy
+from torchmetrics.functional import f1
+
 from colon_ai.VideoCNN_Quality.Datamodule_Quality import VideoCNNDataModuleQuality
 
 
@@ -45,6 +47,8 @@ class VideoClassificationLightningModuleQuality(pytorch_lightning.LightningModul
         loss = F.cross_entropy(y_hat, batch["label"])
         acc = self.train_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
         #acc = accuracy(torch.argmax(y_hat, dim=1), batch["label"])
+        f1_out = f1(y_hat, batch["label"], average='weighted', num_classes=3)
+        self.log('F1_train', f1_out, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("train_loss", loss)
         # self.log("train_acc", acc, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("train_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -58,6 +62,8 @@ class VideoClassificationLightningModuleQuality(pytorch_lightning.LightningModul
         #     print("max prob class: ",torch.argmax(index))
         acc = self.val_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
         #acc = accuracy(torch.argmax(y_hat, dim=1), batch["label"])
+        f1_out = f1(y_hat, batch["label"], average='weighted', num_classes=3)
+        self.log('F1_val', f1_out, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("val_loss", loss)
         self.log("val_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
         return loss
@@ -66,6 +72,8 @@ class VideoClassificationLightningModuleQuality(pytorch_lightning.LightningModul
         y_hat = self.model(batch["video"])
         loss = F.cross_entropy(y_hat, batch["label"])
         acc = self.test_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
+        f1_out = f1(y_hat, batch["label"], average='weighted', num_classes=3)
+        self.log('F1_test', f1_out)
         #acc = accuracy(torch.argmax(y_hat, dim=1), batch["label"])
         self.log("test_loss", loss)
         self.log("test_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -99,29 +107,15 @@ class Datasetview(Callback):
 
             pl_module.logger.experiment.log({f"{prefix}_dataset": wandb.Image(grid)})
 
-def args_part():
-    parser = ArgumentParser(add_help=False)
-    parser.add_argument("--test", default=1, type=int)
-    parser.add_argument("--learning_rate", default=1.27963074094392e-05, type=float)
-    parser.add_argument("--weight_decay", default=0.0003366416828404148, type=float)
-    parser.add_argument("--batch_size", default=3, type=int)
-    parser.add_argument("--max_epochs", default=150, type=int)
-    parser.add_argument("--num_workers", default=1, type=int)
-    # parser.add_argument("--clip_duration", default=0.4, type=int)
-    parser.add_argument("--gpus", default=1, type=int)
 
-    args = parser.parse_args()
-
-    return args
 
 
 def train_part():
     seed_everything(123)
-    #args = args_part()
 
-    hparams = {'weight_decay':  0.000108700739726235,
-               'batch_size': 3,
-               'learning_rate': 2.9440497094097533e-05,
+    hparams = {'weight_decay':  1.4454721473917343e-05,
+               'batch_size': 4,
+               'learning_rate':  0.0005723588537530765,
                'num_workers': 4,
                'gpus': 1,
                'test':1
@@ -130,7 +124,7 @@ def train_part():
     data_module = VideoCNNDataModuleQuality(hparams)
     checkpoint_callback = ModelCheckpoint(filename='test--{epoch}-{val_loss:.2f}-{val_acc:.2f}', monitor="val_loss",
                                            verbose=True)
-    trainer = pytorch_lightning.Trainer(max_epochs=60, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=[Datasetview(), checkpoint_callback])
+    trainer = pytorch_lightning.Trainer(max_epochs=100, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=[Datasetview(), checkpoint_callback])
     trainer.fit(classification_module, data_module)
     trainer.test(datamodule=data_module)
 

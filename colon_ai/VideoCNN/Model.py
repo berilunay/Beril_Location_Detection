@@ -14,6 +14,7 @@ import numpy as np
 import torchvision
 from pytorch_lightning.callbacks import Callback
 import wandb
+from torchmetrics.functional import f1
 
 from colon_ai.VideoCNN.Datamodule import VideoCNNDataModule
 
@@ -46,6 +47,8 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
         y_hat = self.model(batch["video"])
         loss = F.cross_entropy(y_hat, batch["label"])
         acc = self.train_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
+        f1_out = f1(y_hat, batch["label"], average='weighted', num_classes=3)
+        self.log('F1_train', f1_out)
         self.log("train_loss", loss)
         # self.log("train_acc", acc, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("train_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -58,6 +61,8 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
         # for index in probs:
         #     print("max prob class: ",torch.argmax(index))
         acc = self.val_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
+        f1_out = f1(y_hat, batch["label"], average='weighted', num_classes=3)
+        self.log('F1_val', f1_out)
         self.log("val_loss", loss)
         self.log("val_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
         return loss
@@ -66,6 +71,8 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
         y_hat = self.model(batch["video"])
         loss = F.cross_entropy(y_hat, batch["label"])
         acc = self.test_accuracy(F.softmax(y_hat, dim=-1), batch["label"])
+        f1_out = f1(y_hat, batch["label"], average='weighted', num_classes=3)
+        self.log('F1_test', f1_out)
         self.log("test_loss", loss)
         self.log("test_acc", acc, on_epoch=True, prog_bar=True, sync_dist=True)
         return loss
@@ -75,8 +82,7 @@ class VideoClassificationLightningModule(pytorch_lightning.LightningModule):
         Setup the Adam optimizer. Note, that this function also can return a lr scheduler, which is
         usually useful for training video models.
         """
-        # return torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate,
-        #                         weight_decay=self.hparams.weight_decay)
+
         return torch.optim.Adam(self.parameters(), lr=self.hparams['learning_rate'],
                                 weight_decay=self.hparams['weight_decay'])
 
@@ -100,38 +106,24 @@ class Datasetview(Callback):
 
             pl_module.logger.experiment.log({f"{prefix}_dataset": wandb.Image(grid)})
 
-def args_part():
-    parser = ArgumentParser(add_help=False)
-    parser.add_argument("--test", default=1, type=int)
-    parser.add_argument("--learning_rate", default=1.27963074094392e-05, type=float)
-    parser.add_argument("--weight_decay", default=0.0003366416828404148, type=float)
-    parser.add_argument("--batch_size", default=3, type=int)
-    parser.add_argument("--max_epochs", default=150, type=int)
-    parser.add_argument("--num_workers", default=1, type=int)
-    # parser.add_argument("--clip_duration", default=0.4, type=int)
-    parser.add_argument("--gpus", default=1, type=int)
 
-    args = parser.parse_args()
-
-    return args
 
 
 def train_part():
     seed_everything(123)
-    #args = args_part()
 
-    hparams = {'weight_decay':  0.0003517185102217208,
-               'batch_size': 2,
-               'learning_rate':  0.0004052450395570475,
-               'num_workers': 4,
+
+    hparams = {'weight_decay': 0.00015580008840493994,
+               'batch_size': 4,
+               'learning_rate': 4.051572326186531e-05,
+               'num_workers': 3,
                'gpus': 1,
                'test':1
                }
     classification_module = VideoClassificationLightningModule(hparams)
     data_module = VideoCNNDataModule(hparams)
-    trainer = pytorch_lightning.Trainer(max_epochs=400, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=Datasetview())
-    # trainer = pytorch_lightning.Trainer(max_epochs=400, overfit_batches=1, logger=WandbLogger(),
-    #                                     callbacks=Datasetview())
+    trainer = pytorch_lightning.Trainer(max_epochs=100, gpus=hparams['gpus'], logger=WandbLogger(),callbacks=Datasetview())
+
     trainer.fit(classification_module, data_module)
     trainer.test(datamodule=data_module)
 

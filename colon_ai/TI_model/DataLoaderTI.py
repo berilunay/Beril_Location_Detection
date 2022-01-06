@@ -7,7 +7,6 @@ from torchvision import transforms
 from colon_ai.TI_model.DatasetClassTI import ColonDatasetTI
 
 
-
 class ColonDataModuleTI(pl.LightningDataModule):
     @property
     def hparams(self):
@@ -15,36 +14,30 @@ class ColonDataModuleTI(pl.LightningDataModule):
 
     def __init__(self, hparams, mean=None, std=None):
         super(ColonDataModuleTI, self).__init__()
-        #self.save_hyperparameters(hparams)
+
         self.hparams = hparams
         self.root_dir_train = "/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Train_TI_Labels"
+        self.root_dir_val = "/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Validation_TI_Labels"
         self.root_dir_test = "/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Test_TI_Labels"
-
 
         self.my_transform = transforms.Compose([
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomRotation(degrees=95),
-            transforms.ColorJitter(brightness=0.5)
+            transforms.ColorJitter(brightness=0.5),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+
+        self.val_test_transform = transforms.Compose([
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
         ])
 
     def setup(self, stage=None):
 
-        train_dataset = ColonDatasetTI(root=self.root_dir_train,transform=self.my_transform)
-        test_dataset=ColonDatasetTI(root=self.root_dir_test)
-
-        # do the split
-        len_train_dataset = len(train_dataset)
-        len_train_splitted = int(0.75 * len_train_dataset)
-        len_val = len_train_dataset - len_train_splitted
-
-        train_dataset, val_dataset = random_split(train_dataset, [len_train_splitted, len_val])
-
-        # do the splıt agaın to splıt val ın val + test
-        # len_val_dataset = len(val_dataset)
-        # len_val_splitted = int(0.5 * len_val_dataset)
-        # len_test = len_val_dataset - len_val_splitted
-        #
-        # val_dataset, test_dataset = random_split(val_dataset, [len_val_splitted, len_test])
+        train_dataset = ColonDatasetTI(root=self.root_dir_train, transform=self.my_transform)
+        val_dataset = ColonDatasetTI(root=self.root_dir_val,transform=self.val_test_transform)
+        test_dataset = ColonDatasetTI(root=self.root_dir_test,transform=self.val_test_transform)
 
         if stage == "fit" or stage is None:
             self.train_dataset = train_dataset
@@ -54,14 +47,13 @@ class ColonDataModuleTI(pl.LightningDataModule):
             self.test_dataset = test_dataset
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
-
+        return DataLoader(self.train_dataset, self.hparams["batch_size"], shuffle=True, num_workers=self.hparams["num_workers"])
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset,  self.hparams["batch_size"],num_workers=self.hparams["num_workers"])
+        return DataLoader(self.val_dataset, self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset,  self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
+        return DataLoader(self.test_dataset, self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
     @hparams.setter
     def hparams(self, value):

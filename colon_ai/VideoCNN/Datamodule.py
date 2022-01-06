@@ -25,7 +25,7 @@ from torchvision.transforms import (
     Compose,
     Lambda,
     RandomCrop,
-    RandomHorizontalFlip, Resize, ColorJitter, ToTensor
+    RandomHorizontalFlip, Resize, ColorJitter, ToTensor, RandomRotation
 )
 
 from colon_ai.VideoCNN.labeledvideodataset import LabeledVideoDataset
@@ -54,13 +54,30 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
                             Lambda(lambda x: x / 255.0),
                             RandomCrop(224),
                             RandomHorizontalFlip(p=0.5),
-
+                            RandomRotation(degrees=95)
 
                         ]
                     ),
                 ),
             ]
         )
+
+        self.test_transforms = Compose(
+            [
+                ApplyTransformToKey(
+                    key="video",
+                    transform=Compose(
+                        [
+                            Resize(224),
+                            Lambda(lambda x: x / 255.0),
+
+                        ]
+                    ),
+                ),
+            ]
+        )
+
+
 
     def dataset_path(self,dataset_path):
         dir_path = pathlib.Path(dataset_path)
@@ -100,12 +117,15 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
             labeled_video_paths=val_dataset_path,
             clip_sampler=pytorchvideo.data.make_clip_sampler("random", self._CLIP_DURATION),
             decode_audio=False,
-            transform = self.train_transforms
+            transform=self.test_transforms
+
         )
         test_dataset=LabeledVideoDataset(
             labeled_video_paths=test_dataset_path,
             clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
             decode_audio=False,
+            transform=self.test_transforms
+
         )
 
         if stage == "fit" or stage is None:
@@ -117,14 +137,12 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
 
 
     def train_dataloader(self):
-        #return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size,num_workers=self.hparams.num_workers)
         return DataLoader(self.train_dataset, batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
+
     def val_dataloader(self):
-        #return DataLoader(self.val_dataset,batch_size=self.hparams.batch_size,num_workers=self.hparams.num_workers)
         return DataLoader(self.val_dataset, batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
 
     def test_dataloader(self):
-        #return DataLoader(self.test_dataset, batch_size=self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.test_dataset, batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
 
     @hparams.setter

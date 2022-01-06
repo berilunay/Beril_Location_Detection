@@ -11,7 +11,7 @@ class InferenceDatasetLocation(VisionDataset):
         self.video_dirs.append(self.root)
         self.sample_dirs = []  # image0,image1 ...
         for video_dir in self.video_dirs:
-            self.sample_dirs += (sorted(Path(video_dir).iterdir())) # gets image and labels(folder)
+            self.sample_dirs += (sorted(Path(video_dir).iterdir()))# gets image and labels(folder)
         if num_samples:
             self.sample_dirs = self.sample_dirs[:num_samples]
 

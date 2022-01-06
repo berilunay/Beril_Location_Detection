@@ -7,16 +7,19 @@ import seaborn
 import torch
 import torchmetrics.functional
 import torchvision
+from efficientnet_pytorch import EfficientNet
 from matplotlib import pyplot as plt
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger, wandb
 from pytorch_lightning.metrics.functional import accuracy
+from torch import nn
 from torchmetrics.functional import f1
-from torchvision.models import resnet18
+from torchvision import transforms
+from torchvision.models import resnet18, resnet50
 from pytorch_lightning import LightningModule, Callback
 from pytorch_lightning.metrics import MeanAbsoluteError
 from torch.nn.functional import l1_loss
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 from torch.nn import functional as F
 from pytorch_lightning import Trainer
 from pytorch_lightning import seed_everything
@@ -36,7 +39,11 @@ class ColonDataModel(LightningModule):
         self.save_hyperparameters(hparams)
 
         # Network
-        self.network = resnet18(num_classes=3)
+        self.network =resnet18(pretrained=True)
+        self.num_ftr= self.network.fc.in_features
+        self.network.fc=nn.Linear(self.num_ftr,3)
+        #self.network = EfficientNet.from_pretrained('efficientnet-b1',num_classes=3)
+
 
     def forward(self, x):
         return self.network(x)
@@ -47,6 +54,8 @@ class ColonDataModel(LightningModule):
         loss = F.cross_entropy(out, targets)
         preds = torch.argmax(out, dim=1)
         acc = accuracy(preds, targets)
+        f1_out = f1(preds, targets, average='weighted', num_classes=3)
+        self.log('F1_train', f1_out)
         self.log('train_loss', loss)
         self.log('train_acc', acc)
         return loss
@@ -82,7 +91,8 @@ class ColonDataModel(LightningModule):
 
 
 
-def show_examples(model, datamodule, class_dict=None):
+def show_examples(model, datamodule):
+    class_dict = {0: 'G', 1: 'M', 2: 'B'}
     data_loader = datamodule.test_dataloader()
     for batch_idx, (features, targets) in enumerate(data_loader):
         with torch.no_grad():
@@ -123,23 +133,30 @@ def show_examples(model, datamodule, class_dict=None):
     plt.show()
 
 def plot_conf_matrix(model,dataloader):
+    orig_labels = []
+    pred_labels = []
 
-    for features,targets in dataloader:
-       # with torch.no_grad():
-        targets_np=targets.numpy()
-        preds = model(features)
-        predictions = torch.argmax(preds, dim=1)
-        pred_numpy = predictions.numpy()
-       # break
+    for features, targets in dataloader:
+        with torch.no_grad():
+            targets_np = targets.numpy()
+            orig_labels.append(targets_np)
+            preds = model(features)
+            predictions = torch.argmax(preds, dim=1)
+            pred_numpy = predictions.numpy()
+            pred_labels.append(pred_numpy)
 
-    print("orig_labels:",targets_np)
-    print("predicted: ",pred_numpy)
-    conf_matrix =confusion_matrix(targets_np, pred_numpy)
-    print("conf_matrix_test: ",conf_matrix)
+    orig_labels_conv = np.concatenate(orig_labels, axis=None)
+    pred_labels_conv = np.concatenate(pred_labels, axis=None)
+
+    print("orig_labels conv:", orig_labels_conv)
+    print("predicted labels conv: ", pred_labels_conv)
+
+    conf_matrix = confusion_matrix(orig_labels_conv, pred_labels_conv)
+    print("conf_matrix_test: ", conf_matrix)
     df_cm = pd.DataFrame(conf_matrix, index=[i for i in "GMB"],
                          columns=[i for i in "GMB"])
     plt.figure(figsize=(3, 3))
-    seaborn.heatmap(df_cm, annot=True,cmap="OrRd")
+    seaborn.heatmap(df_cm, annot=True, cmap="OrRd")
     plt.show()
 
 
@@ -165,57 +182,49 @@ class Datasetview2D(Callback):
 
 def train_part():
     seed_everything(123)
-    # args=args_part()
-    # ----------------------------------------------------------
-    # model=ColonDataModel(hparams=args)
-    # datamodule_colon=ColonDataModule(hparams=args)
-    #
-    # # trainer = Trainer(auto_lr_find=True, max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
-    # # trainer.tune(model,datamodule_colon)
-    #
 
-    # #--------------------------------------------------------------------------------------------
-    # trainer=Trainer( max_epochs=args.max_epochs, gpus=args.gpus, logger=WandbLogger())
-    # trainer.fit(model,datamodule_colon)
-    # trainer.test(datamodule=datamodule_colon)
-    # --------------------------------------------------------------------------------------------
-
-    location_dict = {0: 'G', 1: 'M', 2: 'B'}
-    hparams = {'weight_decay': 2.8394851229727164e-05,
-               'batch_size': 17,
-               'learning_rate': 9.044572191900468e-05,
+    #location_dict = {0: 'G', 1: 'M', 2: 'B'}
+    hparams = {'weight_decay': 0.0003074423420976248,
+               'batch_size':   79,
+               'learning_rate': 1.0374418237011368e-05,
                'num_workers': 4,
                'gpus': 1,
                'test': 1
                }
+
+
     model = ColonDataModel(hparams)
     datamodule_colon = ColonDataModule(hparams)
 
     # -----------------------------------------------------------------------------------------------------------
-    # checkpoint_callback = ModelCheckpoint(
-    #     filename='trial--{epoch}-{val_loss:.2f}-{val_acc:.2f}--{train_loss:.2f}-{train_acc:.2f}', monitor="val_loss",
-    #     verbose=True)
-    #
-    # trainer = Trainer(max_epochs=1, gpus=hparams["gpus"], logger=WandbLogger(),
-    #                   callbacks=[Datasetview2D(), checkpoint_callback], log_every_n_steps=5)
-    # trainer.fit(model, datamodule_colon)
-    # trainer.test(datamodule=datamodule_colon)
+    checkpoint_callback = ModelCheckpoint(
+        filename='withoutaug2--{epoch}-{val_loss:.2f}-{val_acc:.2f}--{train_loss:.2f}-{train_acc:.2f}--{F1_train:.2f}-{F1_val:.2f}', monitor="val_loss",verbose=True)
 
-    #show_examples(model, datamodule_colon, class_dict=location_dict)
-
+    trainer = Trainer(max_epochs=15, gpus=hparams["gpus"], logger=WandbLogger(),
+                      callbacks=[Datasetview2D(), checkpoint_callback], log_every_n_steps=5)
+    trainer.fit(model, datamodule_colon)
+    trainer.test(datamodule=datamodule_colon)
 
 
     # ---------------------------------------------------
-    trainer = Trainer(gpus=hparams["gpus"])
-    checkpoint_model_path_loc = "/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/traınıng/uncategorized/besthparamresult45epoch/checkpoints/besthparam--epoch=39-val_loss=0.11-val_acc=0.96--train_loss=0.00-train_acc=1.00.ckpt"
-    pretrained_model_qua = ColonDataModel.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
-    pretrained_model_qua.eval()
-    trainer.test(pretrained_model_qua,datamodule=datamodule_colon)
-    root_dir_test = "/home/beril/Thesis_Beril/Dataset_preprocess_new/test_quality_labels"
-    test_dataset = ColonDataset(root=root_dir_test)
-    plot_conf_matrix(pretrained_model_qua,DataLoader(test_dataset,batch_size=len(test_dataset)))
+    # val_test_transform = transforms.Compose([
+    #     transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                          std=[0.229, 0.224, 0.225])
+    # ])
+    # root_dir_test = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Quality_Detection/test_quality_labels"
+    # test_dataset = ColonDataset(root=root_dir_test, transform=val_test_transform)
+    # checkpoint_model_path_loc = "/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/traınıng/uncategorized/bestmodel(11.12)/checkpoints/besthparamstd--epoch=0-val_loss=0.78-val_acc=0.61--train_loss=0.63-train_acc=0.75--F1_train=0.76-F1_val=0.67.ckpt"
+    # pretrained_model_qua = ColonDataModel.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
+    # #comment out for getting the test output..........................
+    # #pretrained_model_qua.eval()
+    # # trainer = Trainer(gpus=hparams["gpus"])
+    # # trainer.test(pretrained_model_qua,datamodule=datamodule_colon)
+    # # comment out for getting the test output..........................
+    # pretrained_model_qua.eval()
+    # dataloader_quality = DataLoader(test_dataset, batch_size=pretrained_model_qua.hparams["batch_size"], num_workers=4)
+    # plot_conf_matrix(pretrained_model_qua,dataloader_quality)
 
-    #show_examples(model, datamodule_colon, class_dict=location_dict)
+
 
 if __name__ == '__main__':
     print("...........Training Starts............", "\n")

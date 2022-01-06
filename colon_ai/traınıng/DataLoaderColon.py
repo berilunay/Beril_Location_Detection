@@ -14,37 +14,41 @@ class ColonDataModule(pl.LightningDataModule):
 
     def __init__(self, hparams, mean=None, std=None):
         super(ColonDataModule, self).__init__()
-        #self.save_hyperparameters(hparams)
-        self.hparams = hparams
-        self.root_dir_train = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Train_Quality_Labels"
-        self.root_dir_test = "/home/beril/Thesis_Beril/Dataset_preprocess_new/test_quality_labels"
 
+        self.hparams = hparams
+        self.root_dir_train = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Quality_Detection/train_quality_Labels"
+        self.root_dir_val = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Quality_Detection/val_quality_labels"
+        self.root_dir_test = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Quality_Detection/test_quality_labels"
+        #prev model
+        # self.root_dir_train = "/home/beril/Thesis_Beril/Train_Labels_Quality"
+        # self.root_dir_val = "/home/beril/Thesis_Beril/val_labels_quality"
+        # self.root_dir_test = "/home/beril/Thesis_Beril/test_labels_quality"
 
         self.my_transform = transforms.Compose([
-            #transforms.RandomCrop((224, 224)),
+            transforms.RandomCrop((224, 224)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomRotation(degrees=95),
-            transforms.ColorJitter(brightness=0.5)
+            transforms.ColorJitter(brightness=0.5),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+
+
+        self.val_test_transform = transforms.Compose([
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
         ])
 
     def setup(self, stage=None):
 
-        train_dataset = ColonDataset(root=self.root_dir_train,transform=self.my_transform)
-        test_dataset=ColonDataset(root=self.root_dir_test)
+        # train_dataset = ColonDataset(root=self.root_dir_train,transform=self.my_transform)
+        # val_dataset = ColonDataset(root=self.root_dir_val,transform=self.val_test_transform)
+        # test_dataset=ColonDataset(root=self.root_dir_test,transform=self.val_test_transform)
 
-        # do the split
-        len_train_dataset = len(train_dataset)
-        len_train_splitted = int(0.75 * len_train_dataset)
-        len_val = len_train_dataset - len_train_splitted
+        train_dataset = ColonDataset(root=self.root_dir_train, transform=self.val_test_transform)
+        val_dataset = ColonDataset(root=self.root_dir_val, transform=self.val_test_transform)
+        test_dataset = ColonDataset(root=self.root_dir_test, transform=self.val_test_transform)
 
-        train_dataset, val_dataset = random_split(train_dataset, [len_train_splitted, len_val])
-
-        # do the splıt agaın to splıt val ın val + test
-        # len_val_dataset = len(val_dataset)
-        # len_val_splitted = int(0.5 * len_val_dataset)
-        # len_test = len_val_dataset - len_val_splitted
-        #
-        # val_dataset, test_dataset = random_split(val_dataset, [len_val_splitted, len_test])
 
         if stage == "fit" or stage is None:
             self.train_dataset = train_dataset
@@ -54,15 +58,13 @@ class ColonDataModule(pl.LightningDataModule):
             self.test_dataset = test_dataset
 
     def train_dataloader(self):
-        #return DataLoader(self.train_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
-        return DataLoader(self.train_dataset, self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
+        return DataLoader(self.train_dataset, self.hparams["batch_size"],shuffle=True, num_workers=self.hparams["num_workers"])
 
 
     def val_dataloader(self):
-        #return DataLoader(self.val_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.val_dataset,  self.hparams["batch_size"],num_workers=self.hparams["num_workers"])
+
     def test_dataloader(self):
-        #return DataLoader(self.test_dataset, self.hparams.batch_size, num_workers=self.hparams.num_workers)
         return DataLoader(self.test_dataset,  self.hparams["batch_size"], num_workers=self.hparams["num_workers"])
 
     @hparams.setter

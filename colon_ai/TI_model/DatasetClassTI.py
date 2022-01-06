@@ -40,7 +40,6 @@ class ColonDatasetTI(VisionDataset):
     def _load_colon(self, sample_dir):
         # use pil to load image. path is te sampledir
         im_path = str(sample_dir / "colon.png")
-        #im_path = str(sample_dir / "3D.png")
         colon=cv2.imread(im_path)
         resized_image = cv2.resize(colon, (224, 224),interpolation=cv2.INTER_NEAREST)
         img_new=cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB)
@@ -53,8 +52,7 @@ class ColonDatasetTI(VisionDataset):
 
 
     def _load_location(self, sample_dir):
-        # check
-        #location_path=str(sample_dir / "Location.txt")
+
         location_path = str(sample_dir / "Label.txt")
         loc = open(location_path, 'r')
         label = loc.read()

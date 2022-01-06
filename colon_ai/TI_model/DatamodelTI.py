@@ -6,11 +6,15 @@ from matplotlib import pyplot as plt
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger, wandb
 from pytorch_lightning.metrics.functional import accuracy
+from torch import nn
+
+from torch.utils.data import DataLoader
+from torchvision import transforms
 from torchvision.models import resnet18
 from pytorch_lightning import LightningModule, Callback
 from pytorch_lightning.metrics import MeanAbsoluteError
 from torch.nn.functional import l1_loss
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 from torch.nn import functional as F
 from pytorch_lightning import Trainer
 from pytorch_lightning import seed_everything
@@ -23,6 +27,11 @@ import seaborn
 from colon_ai.TI_model.DataLoaderTI import ColonDataModuleTI
 from torchmetrics.functional import f1
 
+import torch.multiprocessing
+
+from colon_ai.TI_model.DatasetClassTI import ColonDatasetTI
+
+#torch.multiprocessing.set_sharing_strategy('file_system')
 
 class ColonDataModel_TI(LightningModule):
     def __init__(self, hparams):
@@ -30,7 +39,9 @@ class ColonDataModel_TI(LightningModule):
         self.save_hyperparameters(hparams)
 
         # Network
-        self.network = resnet18(num_classes=3)
+        self.network = resnet18(pretrained=True)
+        self.num_ftr = self.network.fc.in_features
+        self.network.fc = nn.Linear(self.num_ftr, 3)
 
 
     def forward(self, x):
@@ -44,6 +55,8 @@ class ColonDataModel_TI(LightningModule):
         loss= F.cross_entropy(out,targets)
         preds = torch.argmax(out, dim=1)
         acc = accuracy(preds, targets)
+        f1_out = f1(preds, targets, average='weighted', num_classes=3)
+        self.log('F1_train', f1_out)
         self.log('train_loss', loss)
         self.log('train_acc', acc)
         return loss
@@ -55,6 +68,8 @@ class ColonDataModel_TI(LightningModule):
         loss = F.cross_entropy(out, targets)
         preds = torch.argmax(out, dim=1)
         acc = accuracy(preds, targets)
+        f1_out = f1(preds, targets, average='weighted', num_classes=3)
+        self.log('F1_val', f1_out)
         self.log('val_loss', loss)
         self.log('val_acc', acc)
         return loss
@@ -76,6 +91,7 @@ class ColonDataModel_TI(LightningModule):
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.hparams["learning_rate"],weight_decay=self.hparams["weight_decay"])
+        #optimizer = SGD(self.parameters(), lr=self.hparams["learning_rate"], weight_decay=self.hparams["weight_decay"])
         return optimizer
 
 
@@ -144,6 +160,7 @@ def plot_conf_matrix(model,dataloader):
     pred_labels=[]
 
     for features,targets in dataloader:
+        with torch.no_grad():
             targets_np=targets.numpy()
             orig_labels.append(targets_np)
             preds = model(features)
@@ -151,29 +168,31 @@ def plot_conf_matrix(model,dataloader):
             pred_numpy = predictions.numpy()
             pred_labels.append(pred_numpy)
 
-    print("orig_labels:",targets_np)
-    print("predicted: ",pred_numpy)
+
     orig_labels_conv=np.concatenate(orig_labels,axis=None)
     pred_labels_conv = np.concatenate(pred_labels, axis=None)
     print("orig_labels conv:",orig_labels_conv)
     print("predicted labels conv: ",pred_labels_conv)
+
     conf_matrix =confusion_matrix(orig_labels_conv, pred_labels_conv)
     print("conf_matrix_test: ",conf_matrix)
-    df_cm = pd.DataFrame(conf_matrix, index=[i for i in "GMB"],
-                         columns=[i for i in "GMB"])
+    df_cm = pd.DataFrame(conf_matrix, index=[i for i in "TPN"],
+                         columns=[i for i in "TPN"])
     plt.figure(figsize=(3, 3))
     seaborn.heatmap(df_cm, annot=True,cmap="OrRd")
+    plt.savefig("conf_matrix.png")
     plt.show()
+
 
 def train_part():
     seed_everything(123)
 
     location_dict = {0:'TI',1:'p',2:'N'}
 
-    hparams = {'weight_decay': 2e-5,
-               'batch_size': 54,
-               'learning_rate': 1e-4,
-               'num_workers': 4,
+    hparams = {'weight_decay':6.935071336760909e-05,
+               'batch_size':  23,
+               'learning_rate':  0.0008955313299796573,
+               'num_workers': 2,
                'gpus': 1,
                'test': 1
                }
@@ -181,21 +200,29 @@ def train_part():
     datamodule_colon=ColonDataModuleTI(hparams)
 
     #-----------------------------------------------------------------------------------------------------------
-    # checkpoint_callback = ModelCheckpoint(filename='trial--{epoch}-{val_loss:.2f}-{val_acc:.2f}--{train_loss:.2f}-{train_acc:.2f}', monitor="val_loss", verbose=True)
-    #
-    # trainer=Trainer( max_epochs=20, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D(), checkpoint_callback], log_every_n_steps=5)
-    # trainer.fit(model,datamodule_colon)
-    # trainer.test(datamodule=datamodule_colon)
+    checkpoint_callback = ModelCheckpoint(filename='testadam--{epoch}-{val_loss:.2f}-{val_acc:.2f}--{train_loss:.2f}-{train_acc:.2f}--{F1_val:.2f}-{F1_train:.2f}', monitor="val_loss", verbose=True)
+
+    trainer=Trainer( max_epochs=10, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D(), checkpoint_callback], log_every_n_steps=5)
+    trainer.fit(model,datamodule_colon)
+    trainer.test(datamodule=datamodule_colon)
     #
     # show_examples(model,datamodule_colon,class_dict=location_dict)
 
     #---------------------------------------------------
-    trainer = Trainer(gpus=hparams["gpus"])
-    checkpoint_model_path_loc = "/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/TI_model/uncategorized/FirstRun/checkpoints/trial--epoch=18-val_loss=0.05-val_acc=0.98--train_loss=0.03-train_acc=0.96.ckpt"
-    pretrained_model_TI = ColonDataModel_TI.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
-    pretrained_model_TI.eval()
-    trainer.test(pretrained_model_TI,datamodule=datamodule_colon)
-    plot_conf_matrix(pretrained_model_TI, datamodule_colon.test_dataloader())
+    # Test_Path = "/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Test_TI_Labels"
+    # val_test_transform = transforms.Compose([
+    #     transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                          std=[0.229, 0.224, 0.225])
+    # ])
+    #
+    # checkpoint_model_path_loc = "/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/TI_model/uncategorized/best_model/checkpoints/besthparamstd--epoch=2-val_loss=0.35-val_acc=0.93--train_loss=0.22-train_acc=0.95.ckpt"
+    # pretrained_model_TI = ColonDataModel_TI.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
+    # pretrained_model_TI.eval()
+    #trainer = Trainer(gpus=hparams["gpus"])
+    #trainer.test(pretrained_model_TI,datamodule=datamodule_colon)
+    # TI_dataset = ColonDatasetTI(root=Test_Path, transform=val_test_transform)
+    # dataloader_TI = DataLoader(TI_dataset, batch_size=pretrained_model_TI.hparams["batch_size"], num_workers=4)
+    # plot_conf_matrix(pretrained_model_TI, dataloader_TI)
 
 
 if __name__ == '__main__':

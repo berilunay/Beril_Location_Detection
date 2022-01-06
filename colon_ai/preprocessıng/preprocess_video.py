@@ -94,7 +94,7 @@ def process_image(video_name, current, filename):
     returned_text = detect_empty_image(file_path)
     create_txt_qua(new_path, returned_text)
 
-    # im4 = im.crop((unit * 1.4, 780, 1770, 1020))
+
     im4 = im.crop((unit * 1.4, 847, 1770, 1060))
     file_path = os.path.join(copy_path, "Location" + ".png")
     new_path2 = os.path.join(copy_path, "Location" + ".txt")
@@ -142,7 +142,6 @@ def process_image_newmodel(video_name, current, filename):
     label_path = os.path.join(copy_path, "Label" + ".txt")
     im2.save(file_path1)
     returned_text_quality = detect_empty_image(file_path1)
-    #create_txt_qua(label_path, returned_text)
 
     im4 = im.crop((unit, 230, 1910, 850))
     file_path3 = os.path.join(copy_path, "3D" + ".png")
@@ -214,9 +213,6 @@ def process_quality(video_name, current, filename):
 def img_txt(file_path):
     img = cv2.imread(file_path)
     img = cv2.bitwise_not(img)
-    # cv2.imshow('image', img)
-    # cv2.waitKey(0)
-    # pytesseract.pytesseract.tesseract_cmd = r'/usr/share/tesseract-ocr/4.00/tessdata'
     custom_config = r'-c tessedit_char_whitelist=BGLMPR --psm 6'
     text = pytesseract.image_to_string(img, config=custom_config)
     split_string = text.split("\n", 1)
@@ -240,8 +236,6 @@ def create_txt_qua(path, str2):
 def detect_empty_image(path):
     img_qua = Image.open(path)
     converted_image = np.asarray(img_qua)
-    # print(converted_image)
-    # number_of_white_pix = np.sum(converted_image == 255)
     number_of_white_pix = np.sum(converted_image)
     print("sum of pixels: ", number_of_white_pix)
     if number_of_white_pix <= 10000:
@@ -311,7 +305,6 @@ def create_video_folder_quality(video_name,count,dir_name):
     copyG = f'/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_train/G/{video_name}'
     copyB = f'/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_train/B/{video_name}'
     copyM = f'/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_train/M/{video_name}'
-    copyP = f'/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_train/p/{video_name}'
 
     image_path = f'/home/beril/Thesis_Beril/Dataset_preprocess_new/Train_Quality_Labels/{video_name}/' + str(dir_name) + "/" + "colon.png"
     img = Image.open(image_path)
@@ -329,71 +322,37 @@ def create_video_folder_quality(video_name,count,dir_name):
         img.save(file_path)
         print(file_path)
 
-    elif (string_loc == "M"):
+    else:
         file_path = os.path.join(copyM, "3D_V4_" + f'{count:05d}' + ".png")
         img.save(file_path)
         print(file_path)
 
-    else:
-        file_path = os.path.join(copyP, "3D_V4_" + f'{count:05d}' + ".png")
-        img.save(file_path)
-        print(file_path)
 
+
+def clean_P():
+    video_name="Video7"
+    video_folder_path=f"/home/beril/Thesis_Beril/Train_Labels_Quality/{video_name}"
+    for foldername in sorted(os.listdir(video_folder_path)):
+        label_path = f'/home/beril/Thesis_Beril/Train_Labels_Quality/{video_name}/' + str(
+            foldername) + "/" + "Quality.txt"
+        label_folder=f'/home/beril/Thesis_Beril/Train_Labels_Quality/{video_name}/' + str(foldername)
+        qua = open(label_path, 'r')
+        string_qua = qua.read()
+        if (string_qua == "p"):
+            print("p detected: ", label_folder)
+            shutil.rmtree(label_folder)
 
 
 
 if __name__ == '__main__':
-    new_model_labels()
+    #clean_P()
+    #new_model_labels()
     #conv_video2_image()
     #trial_labels()
     #create_train_label_quality()
 
-    # video_path="/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Video7"
-    # filenames = sorted(os.listdir(video_path))
-    # print("lenght: ",len(filenames))
-    #video_label_location()
-    #video_label_quality()
-
-    #/home/beril/Thesis_Beril/Dataset_preprocess_new/Images/Video1/Image09829.jpg illenium var
-    #/home/beril/Thesis_Beril/Dataset_preprocess_new/Images/Video1/Image10812.jpg ikiside yok
-    #/home/beril/Thesis_Beril/Dataset_preprocess_new/Images/Video1/Image12405.jpg p var
-
-    #
-    # im_path="/home/beril/Thesis_Beril/Dataset_preprocess_new/Images/Video2/Image17098.jpg"
-    # copy_path="/home/beril/Thesis_Beril/Dataset_preprocess_new/testout"
-    #
-    #
-    # im = Image.open(im_path)
-    # plt.imshow(im)
-    # plt.show()
-    # w, h = im.size
-    # unit = w // 1.75
-    # im1 = im.crop((300, 230, 1100, 850))
-    # file_path = os.path.join(copy_path, "colon" + ".png")
-    # im1.save(file_path)
-    #
-    # im2 = im.crop((60, 795, 378, 1072))
-    # file_path = os.path.join(copy_path, "Quality" + ".png")
-    # label_path = os.path.join(copy_path, "Label" + ".txt")
-    # im2.save(file_path)
-    # returned_text_quality = detect_empty_image(file_path)
-    #
-    #
-    # im3 = im.crop((unit * 1.4, 30, 1790, 232))
-    # file_path = os.path.join(copy_path, "Location" + ".png")
-    # im3.save(file_path)
-    # returned_text_ill = detect_empty_image(file_path)
-    # print("return: ",returned_text_ill)
-    # label = "N"
-    #
-    # if (returned_text_ill == "TI" and returned_text_quality != "p"):
-    #     create_txt_qua(label_path, returned_text_ill)
-    # elif (returned_text_ill != "TI" and returned_text_quality != "p"):
-    #     create_txt_qua(label_path, label)
-    # elif (returned_text_ill != "TI" and returned_text_quality == "p"):
-    #     create_txt_qua(label_path, returned_text_quality)
-    # else:
-    #     create_txt_qua(label_path, returned_text_ill)
-
+    video_path="/home/beril/Thesis_Beril/Train_Labels_Quality/Video7"
+    filenames = sorted(os.listdir(video_path))
+    print("lenght: ",len(filenames))
 
 
