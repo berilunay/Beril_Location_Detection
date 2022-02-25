@@ -26,19 +26,17 @@ import pandas as pd
 import seaborn
 from colon_ai.TI_model.DataLoaderTI import ColonDataModuleTI
 from torchmetrics.functional import f1
-
 import torch.multiprocessing
-
 from colon_ai.TI_model.DatasetClassTI import ColonDatasetTI
 
-#torch.multiprocessing.set_sharing_strategy('file_system')
 
-class ColonDataModel_TI(LightningModule):
+
+class ColonModule_TI(LightningModule):
     def __init__(self, hparams):
-        super(ColonDataModel_TI, self).__init__()
+        super(ColonModule_TI, self).__init__()
         self.save_hyperparameters(hparams)
 
-        # Network
+        """Network"""
         self.network = resnet18(pretrained=True)
         self.num_ftr = self.network.fc.in_features
         self.network.fc = nn.Linear(self.num_ftr, 3)
@@ -59,6 +57,7 @@ class ColonDataModel_TI(LightningModule):
         self.log('F1_train', f1_out)
         self.log('train_loss', loss)
         self.log('train_acc', acc)
+
         return loss
 
 
@@ -72,6 +71,7 @@ class ColonDataModel_TI(LightningModule):
         self.log('F1_val', f1_out)
         self.log('val_loss', loss)
         self.log('val_acc', acc)
+
         return loss
 
 
@@ -91,51 +91,8 @@ class ColonDataModel_TI(LightningModule):
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.hparams["learning_rate"],weight_decay=self.hparams["weight_decay"])
-        #optimizer = SGD(self.parameters(), lr=self.hparams["learning_rate"], weight_decay=self.hparams["weight_decay"])
         return optimizer
 
-
-
-def show_examples(model, datamodule, class_dict=None):
-    data_loader=datamodule.test_dataloader()
-    for batch_idx, (features, targets) in enumerate(data_loader):
-        with torch.no_grad():
-            features = features
-            targets = targets
-            logits = model(features)
-            predictions = torch.argmax(logits, dim=1)
-        break
-
-    fig, axes = plt.subplots(nrows=4, ncols=5,
-                             sharex=True, sharey=True)
-
-
-    nhwc_img = np.transpose(features, axes=(0, 2, 3, 1))
-
-    if nhwc_img.shape[-1] == 1:
-        nhw_img = np.squeeze(nhwc_img.numpy(), axis=3)
-
-        for idx, ax in enumerate(axes.ravel()):
-            ax.imshow(nhw_img[idx], cmap='binary')
-            if class_dict is not None:
-                ax.title.set_text(f'P: {class_dict[predictions[idx].item()]}'
-                                  f'\nT: {class_dict[targets[idx].item()]}')
-            else:
-                ax.title.set_text(f'P: {predictions[idx]} | T: {targets[idx]}')
-            ax.axison = False
-
-    else:
-
-        for idx, ax in enumerate(axes.ravel()):
-            ax.imshow(nhwc_img[idx])
-            if class_dict is not None:
-                ax.title.set_text(f'P: {class_dict[predictions[idx].item()]}'
-                                  f'\nT: {class_dict[targets[idx].item()]}')
-            else:
-                ax.title.set_text(f'P: {predictions[idx]} | T: {targets[idx]}')
-            ax.axison = False
-    plt.tight_layout()
-    plt.show()
 
 
 class Datasetview2D(Callback):
@@ -151,11 +108,10 @@ class Datasetview2D(Callback):
             sample_batch, target_batch = next(iter(data_loader))
             print("sample batch:",np.shape(sample_batch))
             grid = torchvision.utils.make_grid(sample_batch)
-
             pl_module.logger.experiment.log({f"{prefix}_dataset": wandb.Image(grid)})
 
-def plot_conf_matrix(model,dataloader):
 
+def plot_conf_matrix(model,dataloader):
     orig_labels=[]
     pred_labels=[]
 
@@ -168,12 +124,8 @@ def plot_conf_matrix(model,dataloader):
             pred_numpy = predictions.numpy()
             pred_labels.append(pred_numpy)
 
-
     orig_labels_conv=np.concatenate(orig_labels,axis=None)
     pred_labels_conv = np.concatenate(pred_labels, axis=None)
-    print("orig_labels conv:",orig_labels_conv)
-    print("predicted labels conv: ",pred_labels_conv)
-
     conf_matrix =confusion_matrix(orig_labels_conv, pred_labels_conv)
     print("conf_matrix_test: ",conf_matrix)
     df_cm = pd.DataFrame(conf_matrix, index=[i for i in "TPN"],
@@ -187,8 +139,6 @@ def plot_conf_matrix(model,dataloader):
 def train_part():
     seed_everything(123)
 
-    location_dict = {0:'TI',1:'p',2:'N'}
-
     hparams = {'weight_decay':6.935071336760909e-05,
                'batch_size':  23,
                'learning_rate':  0.0008955313299796573,
@@ -196,33 +146,29 @@ def train_part():
                'gpus': 1,
                'test': 1
                }
-    model=ColonDataModel_TI(hparams)
+
+    TI_module=ColonModule_TI(hparams)
     datamodule_colon=ColonDataModuleTI(hparams)
 
-    #-----------------------------------------------------------------------------------------------------------
     checkpoint_callback = ModelCheckpoint(filename='testadam--{epoch}-{val_loss:.2f}-{val_acc:.2f}--{train_loss:.2f}-{train_acc:.2f}--{F1_val:.2f}-{F1_train:.2f}', monitor="val_loss", verbose=True)
-
     trainer=Trainer( max_epochs=10, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D(), checkpoint_callback], log_every_n_steps=5)
-    trainer.fit(model,datamodule_colon)
-    trainer.test(datamodule=datamodule_colon)
-    #
-    # show_examples(model,datamodule_colon,class_dict=location_dict)
+    trainer.fit(TI_module,datamodule_colon)
 
-    #---------------------------------------------------
-    # Test_Path = "/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Test_TI_Labels"
-    # val_test_transform = transforms.Compose([
-    #     transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                          std=[0.229, 0.224, 0.225])
-    # ])
-    #
-    # checkpoint_model_path_loc = "/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/TI_model/uncategorized/best_model/checkpoints/besthparamstd--epoch=2-val_loss=0.35-val_acc=0.93--train_loss=0.22-train_acc=0.95.ckpt"
-    # pretrained_model_TI = ColonDataModel_TI.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
-    # pretrained_model_TI.eval()
-    #trainer = Trainer(gpus=hparams["gpus"])
-    #trainer.test(pretrained_model_TI,datamodule=datamodule_colon)
-    # TI_dataset = ColonDatasetTI(root=Test_Path, transform=val_test_transform)
-    # dataloader_TI = DataLoader(TI_dataset, batch_size=pretrained_model_TI.hparams["batch_size"], num_workers=4)
-    # plot_conf_matrix(pretrained_model_TI, dataloader_TI)
+    """The part for getting the test results and the confusion matrix via inference. Should be commented out after the training is done"""
+    Test_Path = "/home/beril/Thesis_Beril/Dataset_preprocess_new/procedure_detection/Test_TI_Labels"
+    val_test_transform = transforms.Compose([
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ])
+    checkpoint_model_path_loc = "BEST_MODEL_PATH"
+    pretrained_model_TI = ColonModule_TI.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
+    pretrained_model_TI.eval()
+    trainer = Trainer(gpus=hparams["gpus"])
+    trainer.test(pretrained_model_TI,datamodule=datamodule_colon)
+    TI_dataset = ColonDatasetTI(root=Test_Path, transform=val_test_transform)
+    dataloader_TI = DataLoader(TI_dataset, batch_size=pretrained_model_TI.hparams["batch_size"], num_workers=4)
+    pretrained_model_TI.eval()
+    plot_conf_matrix(pretrained_model_TI, dataloader_TI)
 
 
 if __name__ == '__main__':

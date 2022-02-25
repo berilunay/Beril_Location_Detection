@@ -24,23 +24,19 @@ from colon_ai.train_location.DatasetClass_Location import ColonDatasetLocation
 from efficientnet_pytorch import EfficientNet
 
 
-class ColonDataModelLocation(LightningModule):
+class ColonModuleLocation(LightningModule):
     def __init__(self, hparams):
-        super(ColonDataModelLocation, self).__init__()
+        super(ColonModuleLocation, self).__init__()
         self.save_hyperparameters(hparams)
 
-        # Network
-        #self.network = resnet18(num_classes=3)
+        """Network"""
         self.network = resnet18(pretrained=True)
         self.num_ftr= self.network.fc.in_features
         self.network.fc=nn.Linear(self.num_ftr,3)
-        #self.network = EfficientNet.from_pretrained('efficientnet-b1',num_classes=3)
-
 
     def forward(self, x):
 
         return self.network(x)
-
 
     def training_step(self, batch, batch_idx):
         images,targets=batch
@@ -52,8 +48,8 @@ class ColonDataModelLocation(LightningModule):
         self.log('F1_train', f1_out)
         self.log('train_loss', loss)
         self.log('train_acc', acc)
-        return loss
 
+        return loss
 
     def validation_step(self, batch, batch_idx):
         images, targets = batch
@@ -65,8 +61,8 @@ class ColonDataModelLocation(LightningModule):
         self.log('F1_val', f1_out)
         self.log('val_loss', loss)
         self.log('val_acc', acc)
-        return loss
 
+        return loss
 
     def test_step(self, batch, batch_idx):
         images, targets = batch
@@ -79,16 +75,13 @@ class ColonDataModelLocation(LightningModule):
         self.log('test_loss', loss)
         self.log('test_acc', acc)
 
-
         return loss
-
 
     def configure_optimizers(self):
         optimizer = Adam(self.parameters(), lr=self.hparams["learning_rate"],weight_decay=self.hparams["weight_decay"])
         return optimizer
 
-
-
+"""This method prints the images and their respective labels that are predicted"""
 def show_examples(model, datamodule, class_dict=None):
     data_loader=datamodule.test_dataloader()
     for batch_idx, (features, targets) in enumerate(data_loader):
@@ -146,10 +139,6 @@ def plot_conf_matrix(model,dataloader):
 
     orig_labels_conv=np.concatenate(orig_labels,axis=None)
     pred_labels_conv = np.concatenate(pred_labels, axis=None)
-
-    print("orig_labels conv:",orig_labels_conv)
-    print("predicted labels conv: ",pred_labels_conv)
-
     conf_matrix =confusion_matrix(orig_labels_conv, pred_labels_conv)
     print("conf_matrix_test: ",conf_matrix)
     df_cm = pd.DataFrame(conf_matrix, index=[i for i in "RML"],
@@ -171,7 +160,6 @@ class Datasetview2D_Loc(Callback):
             sample_batch, target_batch = next(iter(data_loader))
             print("sample batch:",np.shape(sample_batch))
             grid = torchvision.utils.make_grid(sample_batch)
-
             pl_module.logger.experiment.log({f"{prefix}_dataset": wandb.Image(grid)})
 
 def train_part():
@@ -185,36 +173,30 @@ def train_part():
                'test': 1
                }
 
-
-    model=ColonDataModelLocation(hparams)
+    location_module=ColonModuleLocation(hparams)
     datamodule_colon=ColonDataModuleLocation(hparams)
 
-    #--------------------------------------------------------------------------------------------
-    checkpoint_callback = ModelCheckpoint(filename='withoutag--{epoch}-{val_loss:.2f}-{val_acc:.2f}-{train_loss:.2f}-{train_acc:.2f}-{F1_val:.2f}-{F1_train:.2f}',monitor="val_loss", verbose=True)
-    trainer=Trainer( max_epochs=15, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D_Loc(), checkpoint_callback])
-    trainer.fit(model,datamodule_colon)
+    """Training Part"""
+    checkpoint_callback = ModelCheckpoint(filename='run-{epoch}-{val_loss:.2f}-{val_acc:.2f}-{train_loss:.2f}-{train_acc:.2f}-{F1_val:.2f}-{F1_train:.2f}',mode="min",monitor="val_loss", verbose=True)
+    trainer=Trainer( max_epochs=10, gpus=hparams["gpus"], logger=WandbLogger(), callbacks=[Datasetview2D_Loc(), checkpoint_callback])
+    trainer.fit(location_module,datamodule_colon)
+    show_examples(location_module,datamodule_colon,class_dict=location_dict)
 
-    trainer.test(datamodule=datamodule_colon)
-    #show_examples(model,datamodule_colon,class_dict=location_dict)
-
-    #------------------------------------------------------------------------------
-    # Test_Path = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Location_Detection/test_location_labels"
-    # val_test_transform = transforms.Compose([
-    #     transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                          std=[0.229, 0.224, 0.225])
-    # ])
-    # checkpoint_model_path_loc = "/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/train_location/uncategorized/best_model(11.12)/checkpoints/besthparamstd--epoch=5-val_loss=1.11-val_acc=0.56-train_loss=0.01-train_acc=1.00-F1_val=0.59-F1_train=1.00.ckpt"
-    # pretrained_model_loc = ColonDataModelLocation.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
-    # pretrained_model_loc.eval()
-    # loc_dataset=ColonDatasetLocation(root=Test_Path,transform=val_test_transform)
-    # dataloader_colon=DataLoader(loc_dataset, batch_size=pretrained_model_loc.hparams["batch_size"], num_workers=4)
-    # #run this part if you want to get the test acc for the loaded models..........................
-    # #trainer = Trainer(gpus=pretrained_model_loc.hparams["gpus"])
-    # # trainer.test(pretrained_model_loc,dataloaders=dataloader_colon)
-    # # pretrained_model_loc.eval()
-    # #...........................................................................................
-    # plot_conf_matrix(pretrained_model_loc, dataloader_colon)
-
+    """The part for getting the test results and the confusion matrix via inference. Should be commented out after the training is done"""
+    Test_Path = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Location_Detection/test_location_labels"
+    val_test_transform = transforms.Compose([
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ])
+    checkpoint_model_path_loc = "BEST_MODEL_PATH"
+    pretrained_model_loc = ColonModuleLocation.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
+    pretrained_model_loc.eval()
+    loc_dataset=ColonDatasetLocation(root=Test_Path,transform=val_test_transform)
+    dataloader_colon=DataLoader(loc_dataset, batch_size=pretrained_model_loc.hparams["batch_size"], num_workers=4)
+    trainer = Trainer(gpus=pretrained_model_loc.hparams["gpus"])
+    trainer.test(pretrained_model_loc,dataloaders=dataloader_colon)
+    pretrained_model_loc.eval()
+    plot_conf_matrix(pretrained_model_loc, dataloader_colon)
 
 
 if __name__ == '__main__':

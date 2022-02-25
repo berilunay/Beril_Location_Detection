@@ -3,7 +3,6 @@ from PIL import Image
 import numpy as np
 import os.path
 from pathlib import Path
-
 from matplotlib import pyplot as plt
 from torchvision.datasets import VisionDataset
 import cv2
@@ -14,6 +13,7 @@ class ColonDataset(VisionDataset):
         super(ColonDataset, self).__init__(root, transform=transform, target_transform=target_transform)
         self.video_dirs = sorted(Path(self.root).iterdir())
         self.sample_dirs = []  # image0,image1 ...
+
         for video_dir in self.video_dirs:
             self.sample_dirs+=(sorted(Path(video_dir).iterdir()))  # gets image and labels(folder)
 
@@ -23,7 +23,6 @@ class ColonDataset(VisionDataset):
 
     def __getitem__(self, index):
         sample_dir = self.sample_dirs[index]
-
         colon, location = self._load_and_transform_colon_and_location(sample_dir)
 
         return colon, location
@@ -38,9 +37,8 @@ class ColonDataset(VisionDataset):
 
 
     def _load_colon(self, sample_dir):
-        # use pil to load image. path is te sampledir
+        """use pil to load image. path is te sampledir"""
         im_path = str(sample_dir / "colon.png")
-        #im_path = str(sample_dir / "3D.png")
         colon=cv2.imread(im_path)
         resized_image = cv2.resize(colon, (224, 224),interpolation=cv2.INTER_NEAREST)
         img_new=cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB)
@@ -53,13 +51,13 @@ class ColonDataset(VisionDataset):
 
 
     def _load_location(self, sample_dir):
-        # check
         location_path = str(sample_dir / "Quality.txt")
         loc = open(location_path, 'r')
         location = loc.read()
         location_dict = {"G": 0, "M": 1, "B":2}
         location_label=location_dict[location]
         location_label=torch.tensor(location_label)
+
         return location_label
 
 
@@ -74,14 +72,10 @@ class ColonDataset(VisionDataset):
 
 
     def __len__(self):
+
         return len(self.sample_dirs)
 
 
-
-if __name__ == "__main__":
-    print("hello")
-    dataset = ColonDataset('/home/beril/Thesis_Beril/Train_Labels')
-    colon,location= dataset[0]
 
 
 

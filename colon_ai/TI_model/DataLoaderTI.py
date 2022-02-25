@@ -34,7 +34,6 @@ class ColonDataModuleTI(pl.LightningDataModule):
         ])
 
     def setup(self, stage=None):
-
         train_dataset = ColonDatasetTI(root=self.root_dir_train, transform=self.my_transform)
         val_dataset = ColonDatasetTI(root=self.root_dir_val,transform=self.val_test_transform)
         test_dataset = ColonDatasetTI(root=self.root_dir_test,transform=self.val_test_transform)

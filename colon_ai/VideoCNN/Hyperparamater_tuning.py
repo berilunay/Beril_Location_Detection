@@ -15,10 +15,8 @@ def objective(trial):
         logger=False,
         max_epochs=50,
         gpus=1,
-        #early_stop_callback=PyTorchLightningPruningCallback(trial, monitor="val_acc"),  # early stopping
         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_loss")]
     )
-
     # here we sample the hyper params, similar as in our old random search
     trial_hparams = {"weight_decay": trial.suggest_loguniform("weight_decay", 1e-5, 1e-3),
                     "batch_size": trial.suggest_int("batch_size", 2, 4),
@@ -27,9 +25,9 @@ def objective(trial):
                     'gpus': 1
                      }
 
-    model = VideoClassificationLightningModule(trial_hparams)
+    module = VideoClassificationLightningModule(trial_hparams)
     data_module = VideoCNNDataModule(trial_hparams)
-    trainer.fit(model,data_module)
+    trainer.fit(module,data_module)
 
     return trainer.callback_metrics["val_loss"].item()
 
@@ -39,7 +37,7 @@ if __name__ == '__main__':
     study = optuna.create_study(direction="minimize", pruner=pruner)
     study.optimize(objective, n_trials=25)
     plot_optimization_history(study)
-    #
+
     print("Number of finished trials: {}".format(len(study.trials)))
 
     print("Best trial:")

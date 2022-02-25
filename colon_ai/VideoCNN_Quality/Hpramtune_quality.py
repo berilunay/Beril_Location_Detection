@@ -14,7 +14,6 @@ def objective(trial):
         logger=False,
         max_epochs=50,
         gpus=1,
-        #early_stop_callback=PyTorchLightningPruningCallback(trial, monitor="val_acc"),  # early stopping
         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_loss")]
     )
 
@@ -26,9 +25,9 @@ def objective(trial):
                     'gpus': 1
                      }
 
-    model = VideoClassificationLightningModuleQuality(trial_hparams)
+    module = VideoClassificationLightningModuleQuality(trial_hparams)
     data_module = VideoCNNDataModuleQuality(trial_hparams)
-    trainer.fit(model,data_module)
+    trainer.fit(module,data_module)
 
     return trainer.callback_metrics["val_loss"].item()
 

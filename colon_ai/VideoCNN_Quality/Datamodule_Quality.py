@@ -4,30 +4,22 @@ import matplotlib.pyplot as plt
 import pytorch_lightning
 import pytorchvideo.data
 import torch.utils.data
-
 from numpy import shape
 import numpy as np
 from pytorchvideo.data.labeled_video_paths import LabeledVideoPaths
 from torch.utils.data import DataLoader
-
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
     Normalize,
-    RandomShortSideScale,
-    RemoveKey,
-    ShortSideScale,
-    UniformTemporalSubsample
 )
 from torch.utils.data import random_split
 from torchvision.datasets.folder import make_dataset
-
 from torchvision.transforms import (
     Compose,
     Lambda,
     RandomCrop,
     RandomHorizontalFlip, Resize, ColorJitter, ToTensor, RandomRotation
 )
-
 from colon_ai.VideoCNN_Quality.labeledvideodataset import LabeledVideoDataset
 
 
@@ -42,19 +34,19 @@ class VideoCNNDataModuleQuality(pytorch_lightning.LightningDataModule):
         self._DATA_PATH_TRAIN = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_train"
         self._DATA_PATH_TEST = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_test"
         self._DATA_PATH_VAL = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Quality_Labels/quality_validation"
-        #self._CLIP_DURATION = self.hparams.clip_duration
-        self._CLIP_DURATION = 0.5 # Duration of sampled clip for each video 0.2 before
+        self._CLIP_DURATION = 0.5 # Duration of sampled clip for each video
         self.train_transforms = Compose(
             [
                 ApplyTransformToKey(
                     key="video",
                     transform=Compose(
                         [
-                            Resize(224),
+                            Resize((224,224)),
                             Lambda(lambda x: x / 255.0),
-                            RandomCrop(224),
                             RandomHorizontalFlip(p=0.5),
                             RandomRotation(degrees=95),
+                            Normalize(mean=[0.485, 0.456, 0.406],
+                                      std=[0.229, 0.224, 0.225])
 
 
                         ]
@@ -69,9 +61,10 @@ class VideoCNNDataModuleQuality(pytorch_lightning.LightningDataModule):
                     key="video",
                     transform=Compose(
                         [
-                            Resize(224),
+                            Resize((224,224)),
                             Lambda(lambda x: x / 255.0),
-
+                            Normalize(mean=[0.485, 0.456, 0.406],
+                                      std=[0.229, 0.224, 0.225]),
                         ]
                     ),
                 ),
@@ -107,24 +100,20 @@ class VideoCNNDataModuleQuality(pytorch_lightning.LightningDataModule):
             transform=self.train_transforms
         )
 
-        #shape tensor 3, 15, 224, 224
         batch = next(iter(train_dataset))
         print(shape(batch["video"]))
-
 
         val_dataset=LabeledVideoDataset(
             labeled_video_paths=val_dataset_path,
             clip_sampler=pytorchvideo.data.make_clip_sampler("random", self._CLIP_DURATION),
             decode_audio=False,
             transform = self.test_transforms
-
         )
         test_dataset=LabeledVideoDataset(
             labeled_video_paths=test_dataset_path,
             clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
             decode_audio=False,
             transform = self.test_transforms
-
         )
 
         if stage == "fit" or stage is None:
@@ -137,6 +126,7 @@ class VideoCNNDataModuleQuality(pytorch_lightning.LightningDataModule):
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
+
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.hparams['batch_size'], num_workers=self.hparams['num_workers'])
 

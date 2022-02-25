@@ -14,9 +14,6 @@ from pytorchvideo.transforms import (
     ApplyTransformToKey,
     Normalize,
     RandomShortSideScale,
-    RemoveKey,
-    ShortSideScale,
-    UniformTemporalSubsample
 )
 from torch.utils.data import random_split
 from torchvision.datasets.folder import make_dataset
@@ -42,19 +39,19 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
         self._DATA_PATH_TRAIN = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Location_Labels/location_train"
         self._DATA_PATH_TEST = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Location_Labels/location_test"
         self._DATA_PATH_VAL = "/home/beril/Thesis_Beril/Dataset_preprocess_new/Video_Location_Labels/location_validation"
-        #self._CLIP_DURATION = self.hparams.clip_duration
-        self._CLIP_DURATION = 0.5 # Duration of sampled clip for each video 0.2 before
+        self._CLIP_DURATION = 0.4 # Duration of sampled clip for each video
         self.train_transforms = Compose(
             [
                 ApplyTransformToKey(
                     key="video",
                     transform=Compose(
                         [
-                            Resize(224),
+                            Resize((224,224)),
                             Lambda(lambda x: x / 255.0),
-                            RandomCrop(224),
                             RandomHorizontalFlip(p=0.5),
-                            RandomRotation(degrees=95)
+                            RandomRotation(degrees=95),
+                            Normalize(mean=[0.485, 0.456, 0.406],
+                                                 std=[0.229, 0.224, 0.225])
 
                         ]
                     ),
@@ -68,8 +65,10 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
                     key="video",
                     transform=Compose(
                         [
-                            Resize(224),
+                            Resize((224,224)),
                             Lambda(lambda x: x / 255.0),
+                            Normalize(mean=[0.485, 0.456, 0.406],
+                                      std=[0.229, 0.224, 0.225]),
 
                         ]
                     ),
@@ -94,8 +93,6 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
 
     def setup(self, stage=None):
 
-        #labeled_video_paths = [("...Vıdeo.mpa", 0)]
-
         #define data_paths
         train_dataset_path = self.dataset_path(self._DATA_PATH_TRAIN)
         test_dataset_path  = self.dataset_path(self._DATA_PATH_TEST)
@@ -108,7 +105,6 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
             transform=self.train_transforms
         )
 
-        #shape tensor 3, 15, 224, 224
         batch = next(iter(train_dataset))
         print(shape(batch["video"]))
 
@@ -118,14 +114,13 @@ class VideoCNNDataModule(pytorch_lightning.LightningDataModule):
             clip_sampler=pytorchvideo.data.make_clip_sampler("random", self._CLIP_DURATION),
             decode_audio=False,
             transform=self.test_transforms
-
         )
+
         test_dataset=LabeledVideoDataset(
             labeled_video_paths=test_dataset_path,
             clip_sampler=pytorchvideo.data.make_clip_sampler("uniform", self._CLIP_DURATION),
             decode_audio=False,
             transform=self.test_transforms
-
         )
 
         if stage == "fit" or stage is None:
