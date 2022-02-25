@@ -473,7 +473,7 @@ if __name__ == '__main__':
     #TI Model Outputs
     TI_dataset = InferenceDatasetQuality(root=Test_Path,transform=val_test_transform)
     TI_dict = {0: 'TI', 1: 'p', 2: 'N'}
-    checkpoint_model_path_TI="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/TI_model/uncategorized/best_model/checkpoints/besthparamstd--epoch=2-val_loss=0.35-val_acc=0.93--train_loss=0.22-train_acc=0.95.ckpt"
+    checkpoint_model_path_TI="BEST_MODEL_PATH"
     pretrained_model_TI = ColonModule_TI.load_from_checkpoint(checkpoint_path=checkpoint_model_path_TI)
     pretrained_model_TI.eval()
     TI_loader = DataLoader(TI_dataset, batch_size=pretrained_model_TI.hparams["batch_size"], num_workers=4)
@@ -485,7 +485,7 @@ if __name__ == '__main__':
     #Location Detection Model Outputs
     location_dataset = InferenceDatasetLocation(root=Test_Path,transform=val_test_transform)
     location_dict = {0: 'R', 1: 'M', 2: 'L'}
-    checkpoint_model_path_loc="/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/train_location/uncategorized/best_model(11.12)/checkpoints/besthparamstd--epoch=5-val_loss=1.11-val_acc=0.56-train_loss=0.01-train_acc=1.00-F1_val=0.59-F1_train=1.00.ckpt"
+    checkpoint_model_path_loc="BEST_MODEL_PATH"
     pretrained_model_loc = ColonModuleLocation.load_from_checkpoint(checkpoint_path=checkpoint_model_path_loc)
     pretrained_model_loc.eval()
     location_loader = DataLoader(location_dataset, batch_size=pretrained_model_loc.hparams["batch_size"], num_workers=4)
@@ -500,7 +500,7 @@ if __name__ == '__main__':
     #Quality Detection Model Outputs
     quality_dict = {0: 'G', 1: 'M', 2: 'B'}
     quality_dataset = InferenceDatasetQuality(root=Test_Path,transform=val_test_transform)
-    checkpoint_model_path = "/home/beril/BerilCodes/ColonAI_LocationDetection/colon_ai/traınıng/uncategorized/bestmodel(11.12)/checkpoints/besthparamstd--epoch=0-val_loss=0.78-val_acc=0.61--train_loss=0.63-train_acc=0.75--F1_train=0.76-F1_val=0.67.ckpt"
+    checkpoint_model_path = "BEST_MODEL_PATH"
     pretrained_model = ColonModuleQuality.load_from_checkpoint(checkpoint_path= checkpoint_model_path)
     pretrained_model.eval()
     quality_loader = DataLoader(quality_dataset, batch_size=pretrained_model.hparams["batch_size"], num_workers=4)
